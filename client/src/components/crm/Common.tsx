@@ -35,6 +35,20 @@ export const labels: Record<string, string> = {
   "A faire": "À faire",
   "Devis sans reponse": "Devis sans réponse",
   "RDV a confirmer": "RDV à confirmer",
+  "Non Demarre": "Non démarré",
+  "En Cours": "En cours",
+  Termine: "Terminé",
+  "Compte Cree": "Compte créé",
+  "Formation Effectuee": "Formation effectuée",
+  "Premiers Ecrits Generes": "Premiers écrits générés",
+  Resilie: "Résilié",
+  "A Surveiller": "À surveiller",
+  "A Risque": "À risque",
+  Resolue: "Résolue",
+  Ignoree: "Ignorée",
+  "Sous Utilisation": "Sous-utilisation",
+  "Onboarding Bloque": "Onboarding bloqué",
+  "Compte A Risque": "Compte à risque",
 };
 
 export const labelFor = (value?: string | null) => (value ? labels[value] || value : "—");
@@ -68,6 +82,19 @@ const toneMap: Record<string, string> = {
   Signe: "bg-emerald-50 text-emerald-700 border-emerald-200",
   Expire: "bg-amber-50 text-amber-700 border-amber-200",
   Refuse: "bg-rose-50 text-rose-700 border-rose-200",
+  Actif: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Essai: "bg-sky-50 text-sky-700 border-sky-200",
+  Suspendu: "bg-amber-50 text-amber-700 border-amber-200",
+  Resilie: "bg-slate-100 text-slate-500 border-slate-200",
+  Bon: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "A Surveiller": "bg-amber-50 text-amber-700 border-amber-200",
+  "A Risque": "bg-rose-50 text-rose-700 border-rose-200",
+  Ouverte: "bg-rose-50 text-rose-700 border-rose-200",
+  Resolue: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Ignoree: "bg-slate-100 text-slate-500 border-slate-200",
+  Info: "bg-sky-50 text-sky-700 border-sky-200",
+  Attention: "bg-amber-50 text-amber-700 border-amber-200",
+  Critique: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 export function StatusBadge({ value, className }: { value?: string | null; className?: string }) {
@@ -150,3 +177,5 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, onActi
 }
 
 export const canWriteCrm = (role?: string | null) => role === "admin" || role === "commercial";
+export const canWriteCustomerSuccess = (role?: string | null) => role === "admin";
+export const canWriteSubscriptions = (role?: string | null) => role === "admin" || role === "finance";

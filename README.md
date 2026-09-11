@@ -1,6 +1,6 @@
-# Medactio Pilotage — Pôle Commercial & B2B
+# Medactio Pilotage — MVP V1
 
-Cette première livraison du MVP fournit un **CRM B2B opérationnel** pour piloter la prospection des établissements de santé jusqu’à la signature. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
+Cette version du MVP fournit deux pôles opérationnels : le **CRM Commercial & B2B** et la **Gestion des Clients & Licences**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
 
 ## Fonctionnalités livrées
 
@@ -13,6 +13,12 @@ Cette première livraison du MVP fournit un **CRM B2B opérationnel** pour pilot
 | Fiche opportunité | Étape, montant, échéance, journal chronologique, contacts, devis et relances |
 | Devis | Création d’un brouillon, numéro automatique, date de validité et suivi des statuts jusqu’à la signature |
 | Relances | Programmation, suivi et clôture des relances commerciales |
+| Tableau de bord Succès Client | Clients actifs, MRR/ARR estimés, adoption des sièges, volume d’écrits, comptes à risque, churn et renouvellements à venir |
+| Onboarding client | Checklist par établissement : compte créé, formation effectuée et premiers écrits générés |
+| Licences praticiens | Sièges souscrits versus actifs, activation et désactivation des accès par praticien |
+| Usage et santé client | Historique d’usage par établissement et praticien, évolution sur six mois et health score explicable |
+| Renouvellements et churn | Échéances à 30/60/90 jours, résiliation avec motif et analyse du churn |
+| Alertes Succès Client | Détection idempotente de la sous-utilisation, des onboardings incomplets, des comptes à risque et des renouvellements |
 | Sécurité | Authentification, profils internes et contrôle d’écriture réservé aux rôles `admin` et `commercial` |
 
 ## Architecture de cette livraison
@@ -46,7 +52,23 @@ Le test d’intégration CRUD crée, vérifie puis supprime ses propres données
 
 ```bash
 pnpm tsx scripts/smoke-crud.ts
+pnpm tsx scripts/smoke-customer-success.ts
 ```
+
+Le jeu de démonstration du deuxième pôle se charge séparément et peut être rejoué sans dupliquer les abonnements :
+
+```bash
+pnpm tsx scripts/seed-customer-success.ts
+```
+
+## Alertes et renouvellements automatiques
+
+Deux mécanismes complémentaires sont disponibles. Le bouton **Recalculer** du tableau de bord exécute immédiatement le moteur dans la requête utilisateur ; il est disponible en prévisualisation et utile pour tester ou corriger des données. L’option **Automatisation quotidienne** crée, une fois le site publié, un traitement géré qui appelle chaque jour à 06:00 UTC le point d’entrée sécurisé `/api/scheduled/customer-success-alerts`. Les alertes reposent sur des clés de déduplication et peuvent être résolues ou ignorées sans créer de doublons.
+
+| Approche | Compromis | Coût | Complexité de mise en place |
+|---|---|---|---|
+| Recalcul à la demande | Immédiat et transparent, mais dépend d’une action humaine | Inclus dans l’application | Aucune |
+| Traitement quotidien géré | Fonctionne sans navigateur ouvert et maintient les alertes à jour | Exécution légère selon l’usage d’hébergement | Activation en un clic après publication |
 
 ## Variables et intégrations à préparer
 
@@ -55,7 +77,7 @@ pnpm tsx scripts/smoke-crud.ts
 | Supabase | Base PostgreSQL, Auth et RLS cibles | Migration prête ; raccordement au projet de production à effectuer |
 | Yousign ou DocuSign | Envoi et signature électronique des devis | Champs et cycle de statut prêts ; clé API non requise pour ce lot |
 | Mailjet | Emails transactionnels et relances | Prévu pour le pôle Marketing et l’automatisation avancée |
-| Stripe | Paiement et facturation récurrente | Tables préparées ; non branché dans ce premier pôle |
+| Stripe | Paiement et facturation récurrente | Abonnements gérés dans l’application ; synchronisation Stripe non branchée |
 
 Aucun secret ne doit être commité. Les environnements développement, staging et production doivent conserver des variables séparées.
 
@@ -65,4 +87,4 @@ Cette plateforme est un outil de pilotage interne et ne doit pas recevoir de don
 
 ## Prochaine étape recommandée
 
-Après validation fonctionnelle du CRM, le prochain lot du MVP est le **pôle Gestion des Clients & Licences**. Les tables nécessaires sont déjà présentes afin d’éviter une refonte du modèle de données.
+Après validation des parcours commerciaux et Succès Client, le prochain lot du MVP est le **pôle Secrétariat & Support**. Les tickets déjà pris en compte dans le health score constituent le point de raccordement naturel.

@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { crmRouter } from "./routers/crm";
+import { customerSuccessRouter } from "./routers/customer-success";
 
 export const appRouter = router({
   system: systemRouter,
@@ -15,6 +16,7 @@ export const appRouter = router({
     }),
   }),
   crm: crmRouter,
+  customerSuccess: customerSuccessRouter,
 });
 
 export type AppRouter = typeof appRouter;

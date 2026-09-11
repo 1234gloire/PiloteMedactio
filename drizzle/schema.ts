@@ -8,6 +8,7 @@ import {
   mysqlTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
 
@@ -264,6 +265,83 @@ export const subscriptions = mysqlTable("subscriptions", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const customerOnboardingTasks = mysqlTable(
+  "customer_onboarding_tasks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    organizationId: int("organizationId")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    itemKey: mysqlEnum("itemKey", [
+      "Compte Cree",
+      "Formation Effectuee",
+      "Premiers Ecrits Generes",
+    ]).notNull(),
+    completed: boolean("completed").default(false).notNull(),
+    completedAt: timestamp("completedAt"),
+    completedBy: int("completedBy").references(() => internalUsers.id, {
+      onDelete: "set null",
+    }),
+    note: text("note"),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("customer_onboarding_org_item_unique").on(
+      table.organizationId,
+      table.itemKey
+    ),
+    index("customer_onboarding_org_idx").on(table.organizationId),
+  ]
+);
+
+export const customerAlerts = mysqlTable(
+  "customer_alerts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    organizationId: int("organizationId")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    subscriptionId: int("subscriptionId").references(() => subscriptions.id, {
+      onDelete: "cascade",
+    }),
+    type: mysqlEnum("type", [
+      "Renouvellement",
+      "Sous Utilisation",
+      "Onboarding Bloque",
+      "Compte A Risque",
+    ]).notNull(),
+    severity: mysqlEnum("severity", ["Info", "Attention", "Critique"])
+      .default("Attention")
+      .notNull(),
+    title: varchar("title", { length: 240 }).notNull(),
+    message: text("message").notNull(),
+    dueDate: date("dueDate", { mode: "string" }),
+    status: mysqlEnum("status", ["Ouverte", "Resolue", "Ignoree"])
+      .default("Ouverte")
+      .notNull(),
+    dedupeKey: varchar("dedupeKey", { length: 240 }).notNull().unique(),
+    resolvedAt: timestamp("resolvedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("customer_alerts_org_idx").on(table.organizationId),
+    index("customer_alerts_status_due_idx").on(table.status, table.dueDate),
+  ]
+);
+
+export const customerSuccessAutomations = mysqlTable("customer_success_automations", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull().unique(),
+  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
+  enabled: boolean("enabled").default(false).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const invoices = mysqlTable("invoices", {
   id: int("id").autoincrement().primaryKey(),
   organizationId: int("organizationId")
@@ -480,3 +558,6 @@ export type Deal = typeof deals.$inferSelect;
 export type Interaction = typeof interactions.$inferSelect;
 export type Quote = typeof quotes.$inferSelect;
 export type FollowUp = typeof followUps.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type CustomerOnboardingTask = typeof customerOnboardingTasks.$inferSelect;
+export type CustomerAlert = typeof customerAlerts.$inferSelect;

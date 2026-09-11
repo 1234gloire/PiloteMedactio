@@ -29,7 +29,7 @@ export async function getDb() {
   return _db;
 }
 
-async function requireDb() {
+export async function requireDb() {
   const db = await getDb();
   if (!db) throw new Error("Base de données indisponible");
   return db;

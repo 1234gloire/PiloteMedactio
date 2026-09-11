@@ -7,6 +7,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ContactDetail from "./pages/ContactDetail";
 import Contacts from "./pages/Contacts";
+import CustomerDetail from "./pages/CustomerDetail";
+import Customers from "./pages/Customers";
+import CustomerSuccessDashboard from "./pages/CustomerSuccessDashboard";
 import DealDetail from "./pages/DealDetail";
 import Home from "./pages/Home";
 import OrganizationDetail from "./pages/OrganizationDetail";
@@ -22,6 +25,9 @@ function Router() {
     <Route path="/organisations/:id">{params => <OrganizationDetail id={Number(params.id)} />}</Route>
     <Route path="/contacts" component={Contacts} />
     <Route path="/contacts/:id">{params => <ContactDetail id={Number(params.id)} />}</Route>
+    <Route path="/clients" component={CustomerSuccessDashboard} />
+    <Route path="/clients/liste" component={Customers} />
+    <Route path="/clients/:id">{params => <CustomerDetail id={Number(params.id)} />}</Route>
     <Route component={NotFound} />
   </Switch></DashboardLayout>;
 }

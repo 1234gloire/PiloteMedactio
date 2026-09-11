@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, Bell, Building2, Columns3, Headphones, LayoutDashboard, LogOut, Megaphone, PanelLeft, ShieldCheck, UserRound, Users } from "lucide-react";
+import { Activity, BarChart3, Bell, Building2, Columns3, Headphones, LayoutDashboard, LogOut, Megaphone, PanelLeft, ShieldCheck, UserRound, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -18,8 +18,12 @@ const primaryItems = [
   { icon: UserRound, label: "Contacts", path: "/contacts" },
 ];
 
+const customerItems = [
+  { icon: Activity, label: "Vue Succès Client", path: "/clients" },
+  { icon: Users, label: "Comptes clients", path: "/clients/liste" },
+];
+
 const upcomingItems = [
-  { icon: Users, label: "Clients & licences" },
   { icon: Headphones, label: "Secrétariat & support" },
   { icon: BarChart3, label: "Direction & analytics" },
   { icon: Megaphone, label: "Marketing" },
@@ -46,7 +50,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const active = primaryItems.find(item => item.path === location) || primaryItems.find(item => item.path !== "/" && location.startsWith(item.path));
+  const allItems = [...primaryItems, ...customerItems];
+  const active = allItems.find(item => item.path === location) || allItems.slice().sort((a, b) => b.path.length - a.path.length).find(item => item.path !== "/" && location.startsWith(item.path));
+  const activePole = location.startsWith("/clients") ? "Pôle Clients & Licences" : "Pôle Commercial & B2B";
   return <>
     <Sidebar collapsible="icon" className="border-r border-[#163f5d] bg-[#0f3049] text-white">
       <SidebarHeader className="h-20 justify-center border-b border-white/10 px-4">
@@ -55,6 +61,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       <SidebarContent className="px-2 py-4">
         <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Commercial & B2B</p>
         <SidebarMenu>{primaryItems.map(item => { const isActive = item.path === "/" ? location === "/" : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-10 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
+        <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Clients & Licences</p>
+        <SidebarMenu>{customerItems.map(item => { const isActive = item.path === "/clients" ? location === "/clients" : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-10 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
         <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Prochains pôles</p>
         <SidebarMenu>{upcomingItems.map(item => <SidebarMenuItem key={item.label}><SidebarMenuButton onClick={() => toast.info(`${item.label} sera livré dans un prochain lot du MVP.`)} tooltip={item.label} className="h-10 text-slate-400 hover:bg-white/5 hover:text-slate-200"><item.icon className="h-4 w-4" /><span className="truncate">{item.label}</span><Badge className="ml-auto border-0 bg-white/8 px-1.5 text-[9px] text-slate-400 group-data-[collapsible=icon]:hidden">Bientôt</Badge></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>
       </SidebarContent>
@@ -64,7 +72,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     </Sidebar>
     <SidebarInset className="min-h-screen bg-[#f6f8fa]">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur sm:px-7">
-        <div className="flex items-center gap-3">{isMobile ? <SidebarTrigger className="h-9 w-9" /> : <PanelLeft className="h-4 w-4 text-slate-400" />}<div><p className="text-sm font-semibold text-slate-800">{active?.label || "Commercial & B2B"}</p><p className="hidden text-xs text-muted-foreground sm:block">Pôle Commercial & B2B</p></div></div>
+        <div className="flex items-center gap-3">{isMobile ? <SidebarTrigger className="h-9 w-9" /> : <PanelLeft className="h-4 w-4 text-slate-400" />}<div><p className="text-sm font-semibold text-slate-800">{active?.label || "Medactio Pilotage"}</p><p className="hidden text-xs text-muted-foreground sm:block">{activePole}</p></div></div>
         <Button variant="ghost" size="icon" className="relative rounded-full text-slate-500"><Bell className="h-4.5 w-4.5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-teal-500" /></Button>
       </header>
       <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
