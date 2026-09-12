@@ -22,6 +22,13 @@
       "when": 1789144157339,
       "tag": "0002_hesitant_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1789248543814,
+      "tag": "0003_marvelous_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

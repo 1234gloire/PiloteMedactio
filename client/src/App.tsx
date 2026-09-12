@@ -15,6 +15,13 @@ import Home from "./pages/Home";
 import OrganizationDetail from "./pages/OrganizationDetail";
 import Organizations from "./pages/Organizations";
 import PipelinePage from "./pages/Pipeline";
+import AdminTasks from "./pages/AdminTasks";
+import Contracts from "./pages/Contracts";
+import Invoices from "./pages/Invoices";
+import SupportCalendar from "./pages/SupportCalendar";
+import SupportDashboard from "./pages/SupportDashboard";
+import SupportTicketDetail from "./pages/SupportTicketDetail";
+import SupportTickets from "./pages/SupportTickets";
 
 function Router() {
   return <DashboardLayout><Switch>
@@ -28,6 +35,13 @@ function Router() {
     <Route path="/clients" component={CustomerSuccessDashboard} />
     <Route path="/clients/liste" component={Customers} />
     <Route path="/clients/:id">{params => <CustomerDetail id={Number(params.id)} />}</Route>
+    <Route path="/support" component={SupportDashboard} />
+    <Route path="/support/tickets" component={SupportTickets} />
+    <Route path="/support/tickets/:id">{params => <SupportTicketDetail id={Number(params.id)} />}</Route>
+    <Route path="/support/taches" component={AdminTasks} />
+    <Route path="/support/factures" component={Invoices} />
+    <Route path="/support/contrats" component={Contracts} />
+    <Route path="/support/agenda" component={SupportCalendar} />
     <Route component={NotFound} />
   </Switch></DashboardLayout>;
 }

@@ -49,6 +49,21 @@ export const labels: Record<string, string> = {
   "Sous Utilisation": "Sous-utilisation",
   "Onboarding Bloque": "Onboarding bloqué",
   "Compte A Risque": "Compte à risque",
+  "Acces Licence": "Accès licence",
+  "A Faire": "À faire",
+  "A Signer": "À signer",
+  "En attente client": "En attente client",
+  Resolu: "Résolu",
+  Envoyee: "Envoyée",
+  Payee: "Payée",
+  "En Retard": "En retard",
+  Echeance: "Échéance",
+  Demo: "Démo",
+  "SLA Depasse": "SLA dépassé",
+  "Echeance Tache": "Échéance tâche",
+  "Facture Impayee": "Facture impayée",
+  "Contrat A Renouveler": "Contrat à renouveler",
+  "Rendez-vous Proche": "Rendez-vous proche",
 };
 
 export const labelFor = (value?: string | null) => (value ? labels[value] || value : "—");
@@ -95,6 +110,21 @@ const toneMap: Record<string, string> = {
   Info: "bg-sky-50 text-sky-700 border-sky-200",
   Attention: "bg-amber-50 text-amber-700 border-amber-200",
   Critique: "bg-rose-50 text-rose-700 border-rose-200",
+  Nouveau: "bg-sky-50 text-sky-700 border-sky-200",
+  "En cours": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "En attente client": "bg-amber-50 text-amber-700 border-amber-200",
+  Resolu: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "A Faire": "bg-slate-100 text-slate-700 border-slate-200",
+  "En Cours": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  Fait: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Basse: "bg-slate-100 text-slate-600 border-slate-200",
+  Moyenne: "bg-sky-50 text-sky-700 border-sky-200",
+  Haute: "bg-amber-50 text-amber-700 border-amber-200",
+  Urgente: "bg-rose-50 text-rose-700 border-rose-200",
+  Envoyee: "bg-sky-50 text-sky-700 border-sky-200",
+  Payee: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "En Retard": "bg-rose-50 text-rose-700 border-rose-200",
+  "A Signer": "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 export function StatusBadge({ value, className }: { value?: string | null; className?: string }) {
@@ -179,3 +209,5 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, onActi
 export const canWriteCrm = (role?: string | null) => role === "admin" || role === "commercial";
 export const canWriteCustomerSuccess = (role?: string | null) => role === "admin";
 export const canWriteSubscriptions = (role?: string | null) => role === "admin" || role === "finance";
+export const canWriteSupport = (role?: string | null) => role === "admin" || role === "secretariat";
+export const canWriteInvoices = (role?: string | null) => role === "admin" || role === "secretariat" || role === "finance";

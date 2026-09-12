@@ -1,16 +1,16 @@
-# Suivi — Pôle Clients & Licences
+# Suivi — Pôle Secrétariat & Support
 
 | Lot | État | Validation |
 |---|---|---|
-| Cadrage | Terminé | Parcours, indicateurs, health score et alertes définis |
-| Modèle de données | Terminé | Trois nouvelles tables migrées, migration Drizzle et migration Supabase disponibles |
-| Backend | Terminé | API typée, CRUD, calculs, audit et permissions opérationnels |
-| Interface | Terminé | Dashboard, liste clients et fiche détaillée validés sur desktop et mobile |
+| Cadrage | Terminé | Tickets, tâches, factures, contrats, agenda et alertes définis |
+| Modèle de données | Terminé | Migration Drizzle additive et migration Supabase/RLS disponibles |
+| Backend | Terminé | API typée, SLA, CRUD, audit, permissions et stockage documentaire opérationnels |
+| Interface | Terminé | Dashboard, tickets, fiche ticket, tâches, factures, contrats et agenda responsive |
 | Automatisation | Terminé | Recalcul immédiat et traitement quotidien sécurisé prêts ; activation après publication |
-| Données de démonstration | Terminé | Sept comptes, six actifs, abonnements, 14 sièges, usages, onboarding, tickets et résiliation |
-| Tests | Terminé | 12 tests automatisés réussis et smoke CRUD réel réussi |
-| Validation | Terminé | TypeScript, build de production et revue responsive réussis |
+| Données de démonstration | Terminé | 7 tickets, tâches, factures, contrats, agenda et alertes représentatifs |
+| Tests | Terminé | 19 tests automatisés et smoke CRUD réel avec stockage réussis |
+| Validation | Terminé | TypeScript, build de production et revue desktop/mobile réussis |
 
 ## Anomalies
 
-Aucune anomalie ouverte. Le build signale uniquement un avertissement non bloquant sur la taille du bundle Vite ; aucun échec TypeScript, test, migration ou rendu n’est présent.
+Aucune anomalie ouverte. Les deux défauts détectés pendant la revue visuelle (compteur des tâches et durée d’un rendez-vous de démonstration) ont été corrigés et revérifiés. Le build conserve uniquement l’avertissement Vite non bloquant relatif à la taille du bundle.

@@ -355,9 +355,15 @@ export const invoices = mysqlTable("invoices", {
   status: mysqlEnum("status", ["Brouillon", "Envoyee", "Payee", "En Retard"])
     .default("Brouillon")
     .notNull(),
+  issuedAt: date("issuedAt", { mode: "string" }),
   dueDate: date("dueDate", { mode: "string" }),
   paidAt: date("paidAt", { mode: "string" }),
+  reminderCount: int("reminderCount").default(0).notNull(),
+  lastReminderAt: timestamp("lastReminderAt"),
+  nextReminderDate: date("nextReminderDate", { mode: "string" }),
+  notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const supportTickets = mysqlTable("support_tickets", {
@@ -382,8 +388,28 @@ export const supportTickets = mysqlTable("support_tickets", {
     .default("Nouveau")
     .notNull(),
   assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
+  slaDueAt: timestamp("slaDueAt"),
+  firstRespondedAt: timestamp("firstRespondedAt"),
+  resolvedAt: timestamp("resolvedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("support_tickets_status_idx").on(table.status),
+  index("support_tickets_sla_idx").on(table.slaDueAt),
+]);
+
+export const supportTicketEvents = mysqlTable("support_ticket_events", {
+  id: int("id").autoincrement().primaryKey(),
+  ticketId: int("ticketId")
+    .notNull()
+    .references(() => supportTickets.id, { onDelete: "cascade" }),
+  authorId: int("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
+  eventType: mysqlEnum("eventType", ["Commentaire", "Changement Statut", "Note Interne", "Relance Client"])
+    .default("Commentaire")
+    .notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("support_ticket_events_ticket_idx").on(table.ticketId)]);
 
 export const adminTasks = mysqlTable("admin_tasks", {
   id: int("id").autoincrement().primaryKey(),
@@ -394,8 +420,83 @@ export const adminTasks = mysqlTable("admin_tasks", {
   }),
   assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
   dueDate: date("dueDate", { mode: "string" }),
+  priority: mysqlEnum("priority", ["Basse", "Moyenne", "Haute"]).default("Moyenne").notNull(),
   status: mysqlEnum("status", ["A Faire", "En Cours", "Fait"]).default("A Faire").notNull(),
+  completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("admin_tasks_due_idx").on(table.status, table.dueDate)]);
+
+export const establishmentContracts = mysqlTable("establishment_contracts", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 240 }).notNull(),
+  type: mysqlEnum("type", ["Convention", "Contrat", "DPA", "Avenant", "Autre"])
+    .default("Contrat")
+    .notNull(),
+  status: mysqlEnum("status", ["Brouillon", "A Signer", "Actif", "Expire", "Resilie"])
+    .default("Brouillon")
+    .notNull(),
+  startDate: date("startDate", { mode: "string" }),
+  endDate: date("endDate", { mode: "string" }),
+  signedAt: date("signedAt", { mode: "string" }),
+  documentKey: text("documentKey"),
+  documentUrl: text("documentUrl"),
+  documentName: varchar("documentName", { length: 240 }),
+  documentMimeType: varchar("documentMimeType", { length: 120 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("establishment_contracts_org_idx").on(table.organizationId),
+  index("establishment_contracts_end_idx").on(table.status, table.endDate),
+]);
+
+export const calendarEvents = mysqlTable("calendar_events", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 240 }).notNull(),
+  description: text("description"),
+  eventType: mysqlEnum("eventType", ["Rendez-vous Interne", "Demo", "Rendez-vous Client", "Echeance", "Autre"])
+    .default("Rendez-vous Interne")
+    .notNull(),
+  organizationId: int("organizationId").references(() => organizations.id, { onDelete: "set null" }),
+  contactId: int("contactId").references(() => contacts.id, { onDelete: "set null" }),
+  organizerId: int("organizerId").references(() => internalUsers.id, { onDelete: "set null" }),
+  startAt: timestamp("startAt").notNull(),
+  endAt: timestamp("endAt"),
+  allDay: boolean("allDay").default(false).notNull(),
+  location: varchar("location", { length: 240 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("calendar_events_start_idx").on(table.startAt)]);
+
+export const supportAlerts = mysqlTable("support_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  entityType: mysqlEnum("entityType", ["Ticket", "Tache", "Facture", "Contrat", "Evenement"]).notNull(),
+  entityId: int("entityId").notNull(),
+  alertType: mysqlEnum("alertType", ["SLA Depasse", "Echeance Tache", "Facture Impayee", "Contrat A Renouveler", "Rendez-vous Proche"]).notNull(),
+  severity: mysqlEnum("severity", ["Info", "Attention", "Critique"]).default("Attention").notNull(),
+  title: varchar("title", { length: 240 }).notNull(),
+  message: text("message").notNull(),
+  dueAt: timestamp("dueAt"),
+  link: text("link"),
+  status: mysqlEnum("status", ["Ouverte", "Resolue", "Ignoree"]).default("Ouverte").notNull(),
+  dedupeKey: varchar("dedupeKey", { length: 240 }).notNull().unique(),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("support_alerts_status_due_idx").on(table.status, table.dueAt)]);
+
+export const supportAutomations = mysqlTable("support_automations", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull().unique(),
+  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
+  enabled: boolean("enabled").default(false).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const usageLogs = mysqlTable("usage_logs", {
@@ -561,3 +662,8 @@ export type FollowUp = typeof followUps.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type CustomerOnboardingTask = typeof customerOnboardingTasks.$inferSelect;
 export type CustomerAlert = typeof customerAlerts.$inferSelect;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type AdminTask = typeof adminTasks.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type EstablishmentContract = typeof establishmentContracts.$inferSelect;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;

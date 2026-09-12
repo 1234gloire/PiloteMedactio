@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, BarChart3, Bell, Building2, Columns3, Headphones, LayoutDashboard, LogOut, Megaphone, PanelLeft, ShieldCheck, UserRound, Users } from "lucide-react";
+import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Columns3, FileCheck2, Headphones, LayoutDashboard, LogOut, Megaphone, PanelLeft, ReceiptText, ShieldCheck, UserRound, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -23,8 +23,16 @@ const customerItems = [
   { icon: Users, label: "Comptes clients", path: "/clients/liste" },
 ];
 
+const supportItems = [
+  { icon: Headphones, label: "Vue Support", path: "/support" },
+  { icon: Headphones, label: "Tickets", path: "/support/tickets" },
+  { icon: ClipboardCheck, label: "Tâches", path: "/support/taches" },
+  { icon: ReceiptText, label: "Facturation", path: "/support/factures" },
+  { icon: FileCheck2, label: "Contrats", path: "/support/contrats" },
+  { icon: CalendarDays, label: "Agenda", path: "/support/agenda" },
+];
+
 const upcomingItems = [
-  { icon: Headphones, label: "Secrétariat & support" },
   { icon: BarChart3, label: "Direction & analytics" },
   { icon: Megaphone, label: "Marketing" },
 ];
@@ -50,9 +58,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const allItems = [...primaryItems, ...customerItems];
+  const allItems = [...primaryItems, ...customerItems, ...supportItems];
   const active = allItems.find(item => item.path === location) || allItems.slice().sort((a, b) => b.path.length - a.path.length).find(item => item.path !== "/" && location.startsWith(item.path));
-  const activePole = location.startsWith("/clients") ? "Pôle Clients & Licences" : "Pôle Commercial & B2B";
+  const activePole = location.startsWith("/support") ? "Pôle Secrétariat & Support" : location.startsWith("/clients") ? "Pôle Clients & Licences" : "Pôle Commercial & B2B";
   return <>
     <Sidebar collapsible="icon" className="border-r border-[#163f5d] bg-[#0f3049] text-white">
       <SidebarHeader className="h-20 justify-center border-b border-white/10 px-4">
@@ -63,6 +71,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         <SidebarMenu>{primaryItems.map(item => { const isActive = item.path === "/" ? location === "/" : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-10 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
         <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Clients & Licences</p>
         <SidebarMenu>{customerItems.map(item => { const isActive = item.path === "/clients" ? location === "/clients" : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-10 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
+        <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Secrétariat & Support</p>
+        <SidebarMenu>{supportItems.map(item => { const isActive = item.path === "/support" ? location === "/support" : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-10 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
         <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Prochains pôles</p>
         <SidebarMenu>{upcomingItems.map(item => <SidebarMenuItem key={item.label}><SidebarMenuButton onClick={() => toast.info(`${item.label} sera livré dans un prochain lot du MVP.`)} tooltip={item.label} className="h-10 text-slate-400 hover:bg-white/5 hover:text-slate-200"><item.icon className="h-4 w-4" /><span className="truncate">{item.label}</span><Badge className="ml-auto border-0 bg-white/8 px-1.5 text-[9px] text-slate-400 group-data-[collapsible=icon]:hidden">Bientôt</Badge></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>
       </SidebarContent>
