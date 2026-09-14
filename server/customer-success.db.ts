@@ -273,8 +273,8 @@ export async function toggleOnboardingTask(id: number, completed: boolean, compl
 
 export async function createSubscription(data: typeof subscriptions.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(subscriptions).values(data);
-  const id = Number(result[0].insertId);
+  const result = await db.insert(subscriptions).values(data).returning({ id: subscriptions.id });
+  const id = result[0].id;
   await ensureOnboardingTasks(data.organizationId);
   await db.update(organizations).set({ status: "Client Actif" }).where(eq(organizations.id, data.organizationId));
   return { id };
@@ -326,8 +326,8 @@ export async function setLicenseStatus(contactId: number, active: boolean) {
 
 export async function addUsage(data: typeof usageLogs.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(usageLogs).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(usageLogs).values(data).returning({ id: usageLogs.id });
+  return { id: result[0].id };
 }
 
 export async function updateAlert(id: number, status: "Ouverte" | "Resolue" | "Ignoree") {
@@ -351,8 +351,7 @@ export async function refreshCustomerAlerts(referenceDate = new Date()) {
     const candidates = buildCustomerAlertCandidates(customer);
     for (const candidate of candidates) {
       if (ignoredKeys.has(candidate.dedupeKey)) continue;
-      await db.insert(customerAlerts).values(candidate).onDuplicateKeyUpdate({
-        set: {
+      await db.insert(customerAlerts).values(candidate).onConflictDoUpdate({ target: customerAlerts.dedupeKey, set: {
           subscriptionId: candidate.subscriptionId,
           severity: candidate.severity,
           title: candidate.title,
@@ -369,22 +368,21 @@ export async function refreshCustomerAlerts(referenceDate = new Date()) {
     name: "daily-customer-success-alerts",
     enabled: false,
     lastRunAt: referenceDate,
-  }).onDuplicateKeyUpdate({ set: { lastRunAt: referenceDate } });
+  }).onConflictDoUpdate({ target: customerSuccessAutomations.name, set: { lastRunAt: referenceDate } });
   return { processedCustomers: customers.length, alerts: createdOrReopened, ranAt: referenceDate };
 }
 
-export async function getAutomationByTaskUid(taskUid: string) {
-  const db = await requireDb();
-  return (await db.select().from(customerSuccessAutomations).where(eq(customerSuccessAutomations.scheduleCronTaskUid, taskUid)).limit(1))[0] || null;
-}
-
-export async function updateAutomationTaskUid(taskUid: string | null, enabled = true) {
+/**
+ * Active ou suspend le traitement quotidien. La planification elle-même est
+ * portée par `pg_cron` côté Supabase : le déclenchement a toujours lieu, et
+ * c'est cet indicateur qui décide si le calcul est réellement exécuté.
+ */
+export async function setCustomerAutomationEnabled(enabled: boolean) {
   const db = await requireDb();
   await db.insert(customerSuccessAutomations).values({
     name: "daily-customer-success-alerts",
-    scheduleCronTaskUid: taskUid,
     enabled,
-  }).onDuplicateKeyUpdate({ set: { scheduleCronTaskUid: taskUid, enabled } });
+  }).onConflictDoUpdate({ target: customerSuccessAutomations.name, set: { enabled } });
   return { success: true } as const;
 }
 

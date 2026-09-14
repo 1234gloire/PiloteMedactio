@@ -17,7 +17,7 @@ import * as db from "./db";
 import * as supportDb from "./support.db";
 import { supportRouter } from "./routers/support";
 
-function context(): TrpcContext { return { user: { id: 1, openId: "test", email: "test@medactio.fr", name: "Test", loginMethod: "manus", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] }; }
+function context(): TrpcContext { return { user: { id: 1, openId: "test", email: "test@medactio.fr", name: "Test", loginMethod: "supabase", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] }; }
 function profile(role: "admin" | "direction" | "commercial" | "marketing" | "secretariat" | "finance") { return { id: 7, userId: 1, fullName: "Profil test", email: "profil@medactio.fr", role, jobTitle: null, hireDate: null, createdAt: new Date() }; }
 const ticket = { organizationId: 2, contactId: null, title: "Accès impossible", description: "Le compte ne peut plus se connecter", category: "Acces Licence" as const, priority: "Haute" as const, status: "Nouveau" as const, assignedTo: 7 };
 const invoice = { organizationId: 2, subscriptionId: null, invoiceNumber: "FAC-TEST", amount: 1200, status: "Envoyee" as const, issuedAt: "2026-09-01", dueDate: "2026-09-30", paidAt: null, nextReminderDate: null, notes: null };

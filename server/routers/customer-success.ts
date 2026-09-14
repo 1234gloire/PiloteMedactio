@@ -1,8 +1,5 @@
-import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
-import { parse as parseCookie } from "cookie";
 import { z } from "zod";
-import { createHeartbeatJob, deleteHeartbeatJob, updateHeartbeatJob } from "../_core/heartbeat";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as customerDb from "../customer-success.db";
 import * as db from "../db";
@@ -37,10 +34,6 @@ const subscriptionInput = z.object({
   startDate: z.string().date().optional().nullable(),
   renewalDate: z.string().date().optional().nullable(),
 });
-
-function sessionTokenFrom(ctx: { req: { headers: { cookie?: string } } }) {
-  return parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";
-}
 
 export const customerSuccessRouter = router({
   dashboard: protectedProcedure.query(() => customerDb.getCustomerDashboard()),
@@ -119,30 +112,12 @@ export const customerSuccessRouter = router({
     status: protectedProcedure.query(() => customerDb.getCustomerAutomation()),
     enable: protectedProcedure.mutation(async ({ ctx }) => {
       await requireCustomerWrite(ctx);
-      const sessionToken = sessionTokenFrom(ctx);
-      if (!sessionToken) throw new TRPCError({ code: "UNAUTHORIZED", message: "Reconnectez-vous avant d’activer l’automatisation." });
-      const current = await customerDb.getCustomerAutomation();
-      if (current?.scheduleCronTaskUid) {
-        await updateHeartbeatJob(current.scheduleCronTaskUid, { enable: true, cron: "0 0 6 * * *" }, sessionToken);
-        await customerDb.updateAutomationTaskUid(current.scheduleCronTaskUid, true);
-        return { taskUid: current.scheduleCronTaskUid, enabled: true };
-      }
-      const job = await createHeartbeatJob({
-        name: "daily-customer-success-alerts",
-        cron: "0 0 6 * * *",
-        path: "/api/scheduled/customer-success-alerts",
-        description: "Recalcule chaque jour les alertes de renouvellement, d’usage et de santé client Medactio.",
-      }, sessionToken);
-      await customerDb.updateAutomationTaskUid(job.taskUid, true);
-      return { taskUid: job.taskUid, enabled: true, nextExecutionAt: job.nextExecutionAt };
+      await customerDb.setCustomerAutomationEnabled(true);
+      return { enabled: true };
     }),
     disable: protectedProcedure.mutation(async ({ ctx }) => {
       await requireCustomerWrite(ctx);
-      const sessionToken = sessionTokenFrom(ctx);
-      const current = await customerDb.getCustomerAutomation();
-      if (!current?.scheduleCronTaskUid) return { enabled: false };
-      await deleteHeartbeatJob(current.scheduleCronTaskUid, sessionToken);
-      await customerDb.updateAutomationTaskUid(null, false);
+      await customerDb.setCustomerAutomationEnabled(false);
       return { enabled: false };
     }),
   }),

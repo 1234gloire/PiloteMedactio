@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import { contentCalendar, internalUsers, marketingAssets, marketingCampaigns, marketingEvents } from "../drizzle/schema";
 import { captureLead, updateLead } from "../server/marketing.db";
 import { storagePut } from "../server/storage";
@@ -9,7 +9,7 @@ const utc = (value: string) => new Date(`${value}T10:00:00Z`);
 
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   const owner = (await db.select().from(internalUsers).where(eq(internalUsers.email, "marketing@medactio.fr")).limit(1))[0];
   if (!owner) throw new Error("Profil Marketing absent : exécutez seed-analytics.ts d’abord.");
 

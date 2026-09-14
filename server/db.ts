@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, like, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import {
   contacts,
   deals,
@@ -15,12 +15,12 @@ import {
 import { ENV } from "./_core/env";
 import { calculateCommercialMetrics } from "./crm.logic";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: ReturnType<typeof createDb> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = createDb(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -60,7 +60,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
   if (!values.lastSignedIn) values.lastSignedIn = new Date();
   if (!Object.keys(updateSet).length) updateSet.lastSignedIn = new Date();
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
@@ -158,8 +158,8 @@ export async function getOrganization(id: number) {
 
 export async function createOrganization(data: typeof organizations.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(organizations).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(organizations).values(data).returning({ id: organizations.id });
+  return { id: result[0].id };
 }
 
 export async function updateOrganization(id: number, data: Partial<typeof organizations.$inferInsert>) {
@@ -244,8 +244,8 @@ export async function getContact(id: number) {
 
 export async function createContact(data: typeof contacts.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(contacts).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(contacts).values(data).returning({ id: contacts.id });
+  return { id: result[0].id };
 }
 
 export async function updateContact(id: number, data: Partial<typeof contacts.$inferInsert>) {
@@ -338,8 +338,8 @@ export async function getDeal(id: number) {
 
 export async function createDeal(data: typeof deals.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(deals).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(deals).values(data).returning({ id: deals.id });
+  return { id: result[0].id };
 }
 
 export async function updateDeal(id: number, data: Partial<typeof deals.$inferInsert>) {
@@ -357,8 +357,8 @@ export async function deleteDeal(id: number) {
 
 export async function createInteraction(data: typeof interactions.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(interactions).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(interactions).values(data).returning({ id: interactions.id });
+  return { id: result[0].id };
 }
 
 export async function deleteInteraction(id: number) {
@@ -369,8 +369,8 @@ export async function deleteInteraction(id: number) {
 
 export async function createQuote(data: typeof quotes.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(quotes).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(quotes).values(data).returning({ id: quotes.id });
+  return { id: result[0].id };
 }
 
 export async function updateQuote(id: number, data: Partial<typeof quotes.$inferInsert>) {
@@ -387,8 +387,8 @@ export async function deleteQuote(id: number) {
 
 export async function createFollowUp(data: typeof followUps.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(followUps).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(followUps).values(data).returning({ id: followUps.id });
+  return { id: result[0].id };
 }
 
 export async function updateFollowUp(id: number, data: Partial<typeof followUps.$inferInsert>) {

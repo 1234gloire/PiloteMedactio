@@ -3,14 +3,13 @@ import {
   date,
   decimal,
   index,
-  int,
-  mysqlEnum,
-  mysqlTable,
+  integer,
+  pgTable,
   text,
   timestamp,
   uniqueIndex,
   varchar,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 
 export const userRoles = [
   "admin",
@@ -21,53 +20,53 @@ export const userRoles = [
   "finance",
 ] as const;
 
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  role: varchar("role", { length: 32, enum: ["user", "admin"] }).default("user").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+  lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const internalUsers = mysqlTable("internal_users", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").references(() => users.id, { onDelete: "cascade" }).unique(),
+export const internalUsers = pgTable("internal_users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }).unique(),
   fullName: varchar("fullName", { length: 200 }).notNull(),
   email: varchar("email", { length: 320 }).notNull().unique(),
-  role: mysqlEnum("businessRole", userRoles).default("secretariat").notNull(),
+  role: varchar("businessRole", { length: 32, enum: userRoles }).default("secretariat").notNull(),
   jobTitle: varchar("jobTitle", { length: 160 }),
   hireDate: date("hireDate", { mode: "string" }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const organizations = mysqlTable(
+export const organizations = pgTable(
   "organizations",
   {
-    id: int("id").autoincrement().primaryKey(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     name: varchar("name", { length: 240 }).notNull(),
-    type: mysqlEnum("type", [
+    type: varchar("type", { length: 48, enum: [
       "Hopital Public",
       "Clinique Privee",
       "Groupement Hospitalier",
       "Cabinet Liberal",
-    ]).notNull(),
+    ] }).notNull(),
     address: text("address"),
     city: varchar("city", { length: 160 }),
     postalCode: varchar("postalCode", { length: 16 }),
-    status: mysqlEnum("status", [
+    status: varchar("status", { length: 32, enum: [
       "Prospect",
       "En Demo",
       "Negociation",
       "Client Actif",
       "Inactif",
-    ])
+    ] })
       .default("Prospect")
       .notNull(),
-    leadSource: mysqlEnum("leadSource", [
+    leadSource: varchar("leadSource", { length: 48, enum: [
       "Site Web",
       "Salon Professionnel",
       "Recommandation",
@@ -75,33 +74,33 @@ export const organizations = mysqlTable(
       "LinkedIn",
       "Reseau AGAPE",
       "Autre",
-    ]).default("Autre"),
+    ] }).default("Autre"),
     annualContractValue: decimal("annualContractValue", { precision: 12, scale: 2 })
       .default("0")
       .notNull(),
     contractStartDate: date("contractStartDate", { mode: "string" }),
     contractEndDate: date("contractEndDate", { mode: "string" }),
-    onboardingStatus: mysqlEnum("onboardingStatus", [
+    onboardingStatus: varchar("onboardingStatus", { length: 32, enum: [
       "Non Demarre",
       "En Cours",
       "Termine",
-    ])
+    ] })
       .default("Non Demarre")
       .notNull(),
-    healthScore: mysqlEnum("healthScore", ["Bon", "A Surveiller", "A Risque"])
+    healthScore: varchar("healthScore", { length: 32, enum: ["Bon", "A Surveiller", "A Risque"] })
       .default("Bon")
       .notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("organizations_status_idx").on(table.status), index("organizations_name_idx").on(table.name)]
 );
 
-export const contacts = mysqlTable(
+export const contacts = pgTable(
   "contacts",
   {
-    id: int("id").autoincrement().primaryKey(),
-    organizationId: int("organizationId").references(() => organizations.id, {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: integer("organizationId").references(() => organizations.id, {
       onDelete: "set null",
     }),
     fullName: varchar("fullName", { length: 200 }).notNull(),
@@ -111,16 +110,16 @@ export const contacts = mysqlTable(
     jobTitle: varchar("jobTitle", { length: 200 }),
     isLicenseActive: boolean("isLicenseActive").default(false).notNull(),
     licenseActivatedAt: date("licenseActivatedAt", { mode: "string" }),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("contacts_organization_idx").on(table.organizationId), index("contacts_name_idx").on(table.fullName)]
 );
 
-export const marketingCampaigns = mysqlTable("marketing_campaigns", {
-  id: int("id").autoincrement().primaryKey(),
+export const marketingCampaigns = pgTable("marketing_campaigns", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 240 }).notNull(),
-  channel: mysqlEnum("channel", [
+  channel: varchar("channel", { length: 48, enum: [
     "Email",
     "Reseaux Sociaux",
     "SEO-Contenu",
@@ -128,112 +127,112 @@ export const marketingCampaigns = mysqlTable("marketing_campaigns", {
     "Webinaire",
     "Publicite Payante",
     "Autre",
-  ]).notNull(),
+  ] }).notNull(),
   objective: text("objective"),
   budget: decimal("budget", { precision: 12, scale: 2 }).default("0").notNull(),
-  targetLeads: int("targetLeads").default(0).notNull(),
+  targetLeads: integer("targetLeads").default(0).notNull(),
   attributedRevenue: decimal("attributedRevenue", { precision: 12, scale: 2 }).default("0").notNull(),
   startDate: date("startDate", { mode: "string" }),
   endDate: date("endDate", { mode: "string" }),
-  status: mysqlEnum("status", ["Planifiee", "En Cours", "Terminee"])
+  status: varchar("status", { length: 32, enum: ["Planifiee", "En Cours", "Terminee"] })
     .default("Planifiee")
     .notNull(),
-  ownerId: int("ownerId").references(() => internalUsers.id, { onDelete: "set null" }),
-  leadsGenerated: int("leadsGenerated").default(0).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  ownerId: integer("ownerId").references(() => internalUsers.id, { onDelete: "set null" }),
+  leadsGenerated: integer("leadsGenerated").default(0).notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const contentCalendar = mysqlTable("content_calendar", {
-  id: int("id").autoincrement().primaryKey(),
-  campaignId: int("campaignId").references(() => marketingCampaigns.id, {
+export const contentCalendar = pgTable("content_calendar", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  campaignId: integer("campaignId").references(() => marketingCampaigns.id, {
     onDelete: "set null",
   }),
   title: varchar("title", { length: 240 }).notNull(),
-  contentType: mysqlEnum("contentType", [
+  contentType: varchar("contentType", { length: 48, enum: [
     "Article de Blog",
     "Post Reseau Social",
     "Newsletter",
     "Video",
     "Autre",
-  ]).notNull(),
+  ] }).notNull(),
   brief: text("brief"),
   targetAudience: varchar("targetAudience", { length: 240 }),
   draftContent: text("draftContent"),
   publishDate: date("publishDate", { mode: "string" }),
   publicationUrl: text("publicationUrl"),
-  status: mysqlEnum("status", ["Idee", "En Redaction", "Planifie", "Publie"])
+  status: varchar("status", { length: 32, enum: ["Idee", "En Redaction", "Planifie", "Publie"] })
     .default("Idee")
     .notNull(),
-  assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  assignedTo: integer("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 });
 
-export const deals = mysqlTable(
+export const deals = pgTable(
   "deals",
   {
-    id: int("id").autoincrement().primaryKey(),
-    organizationId: int("organizationId")
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: integer("organizationId")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
-    campaignId: int("campaignId").references(() => marketingCampaigns.id, {
+    assignedTo: integer("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
+    campaignId: integer("campaignId").references(() => marketingCampaigns.id, {
       onDelete: "set null",
     }),
     title: varchar("title", { length: 240 }).notNull(),
     amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
-    stage: mysqlEnum("stage", [
+    stage: varchar("stage", { length: 48, enum: [
       "Prospection",
       "Rendez-vous Place",
       "Demo Effectuee",
       "Devis Envoye",
       "Gagne",
       "Perdu",
-    ])
+    ] })
       .default("Prospection")
       .notNull(),
     expectedCloseDate: date("expectedCloseDate", { mode: "string" }),
     notes: text("notes"),
     lossReason: text("lossReason"),
-    closedAt: timestamp("closedAt"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    closedAt: timestamp("closedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("deals_stage_idx").on(table.stage), index("deals_organization_idx").on(table.organizationId)]
 );
 
-export const marketingLeads = mysqlTable(
+export const marketingLeads = pgTable(
   "marketing_leads",
   {
-    id: int("id").autoincrement().primaryKey(),
-    campaignId: int("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
-    organizationId: int("organizationId").references(() => organizations.id, { onDelete: "set null" }),
-    contactId: int("contactId").references(() => contacts.id, { onDelete: "set null" }),
-    dealId: int("dealId").references(() => deals.id, { onDelete: "set null" }),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    campaignId: integer("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
+    organizationId: integer("organizationId").references(() => organizations.id, { onDelete: "set null" }),
+    contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),
+    dealId: integer("dealId").references(() => deals.id, { onDelete: "set null" }),
     fullName: varchar("fullName", { length: 200 }).notNull(),
     email: varchar("email", { length: 320 }).notNull(),
     phone: varchar("phone", { length: 40 }),
     jobTitle: varchar("jobTitle", { length: 200 }),
     organizationName: varchar("organizationName", { length: 240 }).notNull(),
-    organizationType: mysqlEnum("organizationType", [
+    organizationType: varchar("organizationType", { length: 48, enum: [
       "Hopital Public",
       "Clinique Privee",
       "Groupement Hospitalier",
       "Cabinet Liberal",
-    ]).default("Cabinet Liberal").notNull(),
-    status: mysqlEnum("status", ["Nouveau", "Qualifie", "RDV Planifie", "Converti", "Rejete"])
+    ] }).default("Cabinet Liberal").notNull(),
+    status: varchar("status", { length: 32, enum: ["Nouveau", "Qualifie", "RDV Planifie", "Converti", "Rejete"] })
       .default("Nouveau")
       .notNull(),
-    source: mysqlEnum("source", ["Site Web", "Import", "Evenement", "Manuel"]).default("Site Web").notNull(),
+    source: varchar("source", { length: 32, enum: ["Site Web", "Import", "Evenement", "Manuel"] }).default("Site Web").notNull(),
     utmSource: varchar("utmSource", { length: 160 }),
     utmMedium: varchar("utmMedium", { length: 160 }),
     utmCampaign: varchar("utmCampaign", { length: 240 }),
     consentToContact: boolean("consentToContact").default(false).notNull(),
     notes: text("notes"),
-    qualifiedAt: timestamp("qualifiedAt"),
-    convertedAt: timestamp("convertedAt"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    qualifiedAt: timestamp("qualifiedAt", { withTimezone: true }),
+    convertedAt: timestamp("convertedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     index("marketing_leads_campaign_idx").on(table.campaignId),
@@ -242,35 +241,35 @@ export const marketingLeads = mysqlTable(
   ]
 );
 
-export const marketingEvents = mysqlTable(
+export const marketingEvents = pgTable(
   "marketing_events",
   {
-    id: int("id").autoincrement().primaryKey(),
-    campaignId: int("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    campaignId: integer("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
     title: varchar("title", { length: 240 }).notNull(),
-    eventType: mysqlEnum("eventType", ["Webinaire", "Demo Collective", "Salon", "Atelier"])
+    eventType: varchar("eventType", { length: 32, enum: ["Webinaire", "Demo Collective", "Salon", "Atelier"] })
       .default("Webinaire")
       .notNull(),
-    scheduledAt: timestamp("scheduledAt").notNull(),
-    registrationCount: int("registrationCount").default(0).notNull(),
-    attendeeCount: int("attendeeCount").default(0).notNull(),
-    meetingsBooked: int("meetingsBooked").default(0).notNull(),
-    status: mysqlEnum("status", ["Planifie", "Termine", "Annule"]).default("Planifie").notNull(),
+    scheduledAt: timestamp("scheduledAt", { withTimezone: true }).notNull(),
+    registrationCount: integer("registrationCount").default(0).notNull(),
+    attendeeCount: integer("attendeeCount").default(0).notNull(),
+    meetingsBooked: integer("meetingsBooked").default(0).notNull(),
+    status: varchar("status", { length: 32, enum: ["Planifie", "Termine", "Annule"] }).default("Planifie").notNull(),
     meetingUrl: text("meetingUrl"),
     notes: text("notes"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("marketing_events_campaign_idx").on(table.campaignId), index("marketing_events_date_idx").on(table.scheduledAt)]
 );
 
-export const marketingAssets = mysqlTable(
+export const marketingAssets = pgTable(
   "marketing_assets",
   {
-    id: int("id").autoincrement().primaryKey(),
-    campaignId: int("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    campaignId: integer("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
     title: varchar("title", { length: 240 }).notNull(),
-    assetType: mysqlEnum("assetType", ["Plaquette", "Argumentaire", "Etude de Cas", "Presentation", "Visuel", "Autre"])
+    assetType: varchar("assetType", { length: 32, enum: ["Plaquette", "Argumentaire", "Etude de Cas", "Presentation", "Visuel", "Autre"] })
       .default("Autre")
       .notNull(),
     description: text("description"),
@@ -278,106 +277,106 @@ export const marketingAssets = mysqlTable(
     fileUrl: text("fileUrl").notNull(),
     fileName: varchar("fileName", { length: 240 }).notNull(),
     mimeType: varchar("mimeType", { length: 160 }).notNull(),
-    sizeBytes: int("sizeBytes").default(0).notNull(),
-    createdBy: int("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    sizeBytes: integer("sizeBytes").default(0).notNull(),
+    createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("marketing_assets_campaign_idx").on(table.campaignId), index("marketing_assets_type_idx").on(table.assetType)]
 );
 
-export const interactions = mysqlTable(
+export const interactions = pgTable(
   "interactions",
   {
-    id: int("id").autoincrement().primaryKey(),
-    dealId: int("dealId").references(() => deals.id, { onDelete: "cascade" }),
-    contactId: int("contactId").references(() => contacts.id, { onDelete: "set null" }),
-    createdBy: int("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
-    type: mysqlEnum("type", ["Appel", "Email", "Reunion", "Note"])
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    dealId: integer("dealId").references(() => deals.id, { onDelete: "cascade" }),
+    contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),
+    createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+    type: varchar("type", { length: 32, enum: ["Appel", "Email", "Reunion", "Note"] })
       .default("Note")
       .notNull(),
     content: text("content").notNull(),
-    occurredAt: timestamp("occurredAt").defaultNow().notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    occurredAt: timestamp("occurredAt", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   },
   table => [index("interactions_deal_idx").on(table.dealId), index("interactions_contact_idx").on(table.contactId)]
 );
 
-export const quotes = mysqlTable("quotes", {
-  id: int("id").autoincrement().primaryKey(),
-  dealId: int("dealId")
+export const quotes = pgTable("quotes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  dealId: integer("dealId")
     .notNull()
     .references(() => deals.id, { onDelete: "cascade" }),
   quoteNumber: varchar("quoteNumber", { length: 60 }).notNull().unique(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  status: mysqlEnum("status", ["Brouillon", "Envoye", "Vu", "Signe", "Expire", "Refuse"])
+  status: varchar("status", { length: 32, enum: ["Brouillon", "Envoye", "Vu", "Signe", "Expire", "Refuse"] })
     .default("Brouillon")
     .notNull(),
   validUntil: date("validUntil", { mode: "string" }),
-  sentAt: timestamp("sentAt"),
-  signedAt: timestamp("signedAt"),
+  sentAt: timestamp("sentAt", { withTimezone: true }),
+  signedAt: timestamp("signedAt", { withTimezone: true }),
   externalSignatureUrl: text("externalSignatureUrl"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 });
 
-export const followUps = mysqlTable("follow_ups", {
-  id: int("id").autoincrement().primaryKey(),
-  dealId: int("dealId")
+export const followUps = pgTable("follow_ups", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  dealId: integer("dealId")
     .notNull()
     .references(() => deals.id, { onDelete: "cascade" }),
-  assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
-  type: mysqlEnum("type", ["Devis sans reponse", "RDV a confirmer", "Relance commerciale", "Autre"])
+  assignedTo: integer("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
+  type: varchar("type", { length: 48, enum: ["Devis sans reponse", "RDV a confirmer", "Relance commerciale", "Autre"] })
     .default("Relance commerciale")
     .notNull(),
-  dueAt: timestamp("dueAt").notNull(),
-  status: mysqlEnum("status", ["A faire", "Effectuee", "Annulee"])
+  dueAt: timestamp("dueAt", { withTimezone: true }).notNull(),
+  status: varchar("status", { length: 32, enum: ["A faire", "Effectuee", "Annulee"] })
     .default("A faire")
     .notNull(),
   note: text("note"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const subscriptions = mysqlTable("subscriptions", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId")
+export const subscriptions = pgTable("subscriptions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  organizationId: integer("organizationId")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
   planName: varchar("planName", { length: 160 }).notNull(),
-  seatsPurchased: int("seatsPurchased").default(1).notNull(),
+  seatsPurchased: integer("seatsPurchased").default(1).notNull(),
   pricePerSeat: decimal("pricePerSeat", { precision: 10, scale: 2 }).default("0").notNull(),
-  billingCycle: mysqlEnum("billingCycle", ["Mensuel", "Annuel"]).default("Mensuel").notNull(),
-  status: mysqlEnum("status", ["Essai", "Actif", "Suspendu", "Resilie"])
+  billingCycle: varchar("billingCycle", { length: 32, enum: ["Mensuel", "Annuel"] }).default("Mensuel").notNull(),
+  status: varchar("status", { length: 32, enum: ["Essai", "Actif", "Suspendu", "Resilie"] })
     .default("Essai")
     .notNull(),
   startDate: date("startDate", { mode: "string" }),
   renewalDate: date("renewalDate", { mode: "string" }),
   cancelledAt: date("cancelledAt", { mode: "string" }),
   cancellationReason: text("cancellationReason"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const customerOnboardingTasks = mysqlTable(
+export const customerOnboardingTasks = pgTable(
   "customer_onboarding_tasks",
   {
-    id: int("id").autoincrement().primaryKey(),
-    organizationId: int("organizationId")
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: integer("organizationId")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    itemKey: mysqlEnum("itemKey", [
+    itemKey: varchar("itemKey", { length: 48, enum: [
       "Compte Cree",
       "Formation Effectuee",
       "Premiers Ecrits Generes",
-    ]).notNull(),
+    ] }).notNull(),
     completed: boolean("completed").default(false).notNull(),
-    completedAt: timestamp("completedAt"),
-    completedBy: int("completedBy").references(() => internalUsers.id, {
+    completedAt: timestamp("completedAt", { withTimezone: true }),
+    completedBy: integer("completedBy").references(() => internalUsers.id, {
       onDelete: "set null",
     }),
     note: text("note"),
-    sortOrder: int("sortOrder").default(0).notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    sortOrder: integer("sortOrder").default(0).notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     uniqueIndex("customer_onboarding_org_item_unique").on(
@@ -388,35 +387,35 @@ export const customerOnboardingTasks = mysqlTable(
   ]
 );
 
-export const customerAlerts = mysqlTable(
+export const customerAlerts = pgTable(
   "customer_alerts",
   {
-    id: int("id").autoincrement().primaryKey(),
-    organizationId: int("organizationId")
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: integer("organizationId")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    subscriptionId: int("subscriptionId").references(() => subscriptions.id, {
+    subscriptionId: integer("subscriptionId").references(() => subscriptions.id, {
       onDelete: "cascade",
     }),
-    type: mysqlEnum("type", [
+    type: varchar("type", { length: 48, enum: [
       "Renouvellement",
       "Sous Utilisation",
       "Onboarding Bloque",
       "Compte A Risque",
-    ]).notNull(),
-    severity: mysqlEnum("severity", ["Info", "Attention", "Critique"])
+    ] }).notNull(),
+    severity: varchar("severity", { length: 32, enum: ["Info", "Attention", "Critique"] })
       .default("Attention")
       .notNull(),
     title: varchar("title", { length: 240 }).notNull(),
     message: text("message").notNull(),
     dueDate: date("dueDate", { mode: "string" }),
-    status: mysqlEnum("status", ["Ouverte", "Resolue", "Ignoree"])
+    status: varchar("status", { length: 32, enum: ["Ouverte", "Resolue", "Ignoree"] })
       .default("Ouverte")
       .notNull(),
     dedupeKey: varchar("dedupeKey", { length: 240 }).notNull().unique(),
-    resolvedAt: timestamp("resolvedAt"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    resolvedAt: timestamp("resolvedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     index("customer_alerts_org_idx").on(table.organizationId),
@@ -424,111 +423,111 @@ export const customerAlerts = mysqlTable(
   ]
 );
 
-export const customerSuccessAutomations = mysqlTable("customer_success_automations", {
-  id: int("id").autoincrement().primaryKey(),
+export const customerSuccessAutomations = pgTable("customer_success_automations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 120 }).notNull().unique(),
   scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
   enabled: boolean("enabled").default(false).notNull(),
-  lastRunAt: timestamp("lastRunAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 });
 
-export const invoices = mysqlTable("invoices", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId")
+export const invoices = pgTable("invoices", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  organizationId: integer("organizationId")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
-  subscriptionId: int("subscriptionId").references(() => subscriptions.id, {
+  subscriptionId: integer("subscriptionId").references(() => subscriptions.id, {
     onDelete: "set null",
   }),
   invoiceNumber: varchar("invoiceNumber", { length: 80 }).notNull().unique(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  status: mysqlEnum("status", ["Brouillon", "Envoyee", "Payee", "En Retard"])
+  status: varchar("status", { length: 32, enum: ["Brouillon", "Envoyee", "Payee", "En Retard"] })
     .default("Brouillon")
     .notNull(),
   issuedAt: date("issuedAt", { mode: "string" }),
   dueDate: date("dueDate", { mode: "string" }),
   paidAt: date("paidAt", { mode: "string" }),
-  reminderCount: int("reminderCount").default(0).notNull(),
-  lastReminderAt: timestamp("lastReminderAt"),
+  reminderCount: integer("reminderCount").default(0).notNull(),
+  lastReminderAt: timestamp("lastReminderAt", { withTimezone: true }),
   nextReminderDate: date("nextReminderDate", { mode: "string" }),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 });
 
-export const supportTickets = mysqlTable("support_tickets", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").references(() => organizations.id, {
+export const supportTickets = pgTable("support_tickets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  organizationId: integer("organizationId").references(() => organizations.id, {
     onDelete: "set null",
   }),
-  contactId: int("contactId").references(() => contacts.id, { onDelete: "set null" }),
+  contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),
   title: varchar("title", { length: 240 }).notNull(),
   description: text("description"),
-  category: mysqlEnum("category", [
+  category: varchar("category", { length: 48, enum: [
     "Facturation",
     "Acces Licence",
     "Support Technique",
     "Onboarding",
     "Autre",
-  ]).notNull(),
-  priority: mysqlEnum("priority", ["Basse", "Moyenne", "Haute", "Urgente"])
+  ] }).notNull(),
+  priority: varchar("priority", { length: 32, enum: ["Basse", "Moyenne", "Haute", "Urgente"] })
     .default("Moyenne")
     .notNull(),
-  status: mysqlEnum("status", ["Nouveau", "En cours", "En attente client", "Resolu"])
+  status: varchar("status", { length: 48, enum: ["Nouveau", "En cours", "En attente client", "Resolu"] })
     .default("Nouveau")
     .notNull(),
-  assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
-  slaDueAt: timestamp("slaDueAt"),
-  firstRespondedAt: timestamp("firstRespondedAt"),
-  resolvedAt: timestamp("resolvedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  assignedTo: integer("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
+  slaDueAt: timestamp("slaDueAt", { withTimezone: true }),
+  firstRespondedAt: timestamp("firstRespondedAt", { withTimezone: true }),
+  resolvedAt: timestamp("resolvedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [
   index("support_tickets_status_idx").on(table.status),
   index("support_tickets_sla_idx").on(table.slaDueAt),
 ]);
 
-export const supportTicketEvents = mysqlTable("support_ticket_events", {
-  id: int("id").autoincrement().primaryKey(),
-  ticketId: int("ticketId")
+export const supportTicketEvents = pgTable("support_ticket_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  ticketId: integer("ticketId")
     .notNull()
     .references(() => supportTickets.id, { onDelete: "cascade" }),
-  authorId: int("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
-  eventType: mysqlEnum("eventType", ["Commentaire", "Changement Statut", "Note Interne", "Relance Client"])
+  authorId: integer("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
+  eventType: varchar("eventType", { length: 48, enum: ["Commentaire", "Changement Statut", "Note Interne", "Relance Client"] })
     .default("Commentaire")
     .notNull(),
   content: text("content").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 }, table => [index("support_ticket_events_ticket_idx").on(table.ticketId)]);
 
-export const adminTasks = mysqlTable("admin_tasks", {
-  id: int("id").autoincrement().primaryKey(),
+export const adminTasks = pgTable("admin_tasks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 240 }).notNull(),
   description: text("description"),
-  organizationId: int("organizationId").references(() => organizations.id, {
+  organizationId: integer("organizationId").references(() => organizations.id, {
     onDelete: "set null",
   }),
-  assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
+  assignedTo: integer("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
   dueDate: date("dueDate", { mode: "string" }),
-  priority: mysqlEnum("priority", ["Basse", "Moyenne", "Haute"]).default("Moyenne").notNull(),
-  status: mysqlEnum("status", ["A Faire", "En Cours", "Fait"]).default("A Faire").notNull(),
-  completedAt: timestamp("completedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  priority: varchar("priority", { length: 32, enum: ["Basse", "Moyenne", "Haute"] }).default("Moyenne").notNull(),
+  status: varchar("status", { length: 32, enum: ["A Faire", "En Cours", "Fait"] }).default("A Faire").notNull(),
+  completedAt: timestamp("completedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("admin_tasks_due_idx").on(table.status, table.dueDate)]);
 
-export const establishmentContracts = mysqlTable("establishment_contracts", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId")
+export const establishmentContracts = pgTable("establishment_contracts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  organizationId: integer("organizationId")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 240 }).notNull(),
-  type: mysqlEnum("type", ["Convention", "Contrat", "DPA", "Avenant", "Autre"])
+  type: varchar("type", { length: 32, enum: ["Convention", "Contrat", "DPA", "Avenant", "Autre"] })
     .default("Contrat")
     .notNull(),
-  status: mysqlEnum("status", ["Brouillon", "A Signer", "Actif", "Expire", "Resilie"])
+  status: varchar("status", { length: 32, enum: ["Brouillon", "A Signer", "Actif", "Expire", "Resilie"] })
     .default("Brouillon")
     .notNull(),
   startDate: date("startDate", { mode: "string" }),
@@ -539,75 +538,75 @@ export const establishmentContracts = mysqlTable("establishment_contracts", {
   documentName: varchar("documentName", { length: 240 }),
   documentMimeType: varchar("documentMimeType", { length: 120 }),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [
   index("establishment_contracts_org_idx").on(table.organizationId),
   index("establishment_contracts_end_idx").on(table.status, table.endDate),
 ]);
 
-export const calendarEvents = mysqlTable("calendar_events", {
-  id: int("id").autoincrement().primaryKey(),
+export const calendarEvents = pgTable("calendar_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 240 }).notNull(),
   description: text("description"),
-  eventType: mysqlEnum("eventType", ["Rendez-vous Interne", "Demo", "Rendez-vous Client", "Echeance", "Autre"])
+  eventType: varchar("eventType", { length: 48, enum: ["Rendez-vous Interne", "Demo", "Rendez-vous Client", "Echeance", "Autre"] })
     .default("Rendez-vous Interne")
     .notNull(),
-  organizationId: int("organizationId").references(() => organizations.id, { onDelete: "set null" }),
-  contactId: int("contactId").references(() => contacts.id, { onDelete: "set null" }),
-  organizerId: int("organizerId").references(() => internalUsers.id, { onDelete: "set null" }),
-  startAt: timestamp("startAt").notNull(),
-  endAt: timestamp("endAt"),
+  organizationId: integer("organizationId").references(() => organizations.id, { onDelete: "set null" }),
+  contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),
+  organizerId: integer("organizerId").references(() => internalUsers.id, { onDelete: "set null" }),
+  startAt: timestamp("startAt", { withTimezone: true }).notNull(),
+  endAt: timestamp("endAt", { withTimezone: true }),
   allDay: boolean("allDay").default(false).notNull(),
   location: varchar("location", { length: 240 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("calendar_events_start_idx").on(table.startAt)]);
 
-export const supportAlerts = mysqlTable("support_alerts", {
-  id: int("id").autoincrement().primaryKey(),
-  entityType: mysqlEnum("entityType", ["Ticket", "Tache", "Facture", "Contrat", "Evenement"]).notNull(),
-  entityId: int("entityId").notNull(),
-  alertType: mysqlEnum("alertType", ["SLA Depasse", "Echeance Tache", "Facture Impayee", "Contrat A Renouveler", "Rendez-vous Proche"]).notNull(),
-  severity: mysqlEnum("severity", ["Info", "Attention", "Critique"]).default("Attention").notNull(),
+export const supportAlerts = pgTable("support_alerts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  entityType: varchar("entityType", { length: 32, enum: ["Ticket", "Tache", "Facture", "Contrat", "Evenement"] }).notNull(),
+  entityId: integer("entityId").notNull(),
+  alertType: varchar("alertType", { length: 48, enum: ["SLA Depasse", "Echeance Tache", "Facture Impayee", "Contrat A Renouveler", "Rendez-vous Proche"] }).notNull(),
+  severity: varchar("severity", { length: 32, enum: ["Info", "Attention", "Critique"] }).default("Attention").notNull(),
   title: varchar("title", { length: 240 }).notNull(),
   message: text("message").notNull(),
-  dueAt: timestamp("dueAt"),
+  dueAt: timestamp("dueAt", { withTimezone: true }),
   link: text("link"),
-  status: mysqlEnum("status", ["Ouverte", "Resolue", "Ignoree"]).default("Ouverte").notNull(),
+  status: varchar("status", { length: 32, enum: ["Ouverte", "Resolue", "Ignoree"] }).default("Ouverte").notNull(),
   dedupeKey: varchar("dedupeKey", { length: 240 }).notNull().unique(),
-  resolvedAt: timestamp("resolvedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  resolvedAt: timestamp("resolvedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("support_alerts_status_due_idx").on(table.status, table.dueAt)]);
 
-export const supportAutomations = mysqlTable("support_automations", {
-  id: int("id").autoincrement().primaryKey(),
+export const supportAutomations = pgTable("support_automations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 120 }).notNull().unique(),
   scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
   enabled: boolean("enabled").default(false).notNull(),
-  lastRunAt: timestamp("lastRunAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 });
 
-export const usageLogs = mysqlTable("usage_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId")
+export const usageLogs = pgTable("usage_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  organizationId: integer("organizationId")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
-  contactId: int("contactId").references(() => contacts.id, { onDelete: "cascade" }),
-  documentsGeneratedCount: int("documentsGeneratedCount").default(1).notNull(),
-  aiRequestsCount: int("aiRequestsCount").default(0).notNull(),
+  contactId: integer("contactId").references(() => contacts.id, { onDelete: "cascade" }),
+  documentsGeneratedCount: integer("documentsGeneratedCount").default(1).notNull(),
+  aiRequestsCount: integer("aiRequestsCount").default(0).notNull(),
   logDate: date("logDate", { mode: "string" }).notNull(),
 });
 
-export const notifications = mysqlTable("notifications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId")
+export const notifications = pgTable("notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("userId")
     .notNull()
     .references(() => internalUsers.id, { onDelete: "cascade" }),
-  category: mysqlEnum("category", [
+  category: varchar("category", { length: 32, enum: [
     "Commercial",
     "Marketing",
     "Succes Client",
@@ -617,131 +616,131 @@ export const notifications = mysqlTable("notifications", {
     "RH",
     "Produit",
     "Fournisseurs",
-  ]).default("Support"),
+  ] }).default("Support"),
   message: text("message").notNull(),
   link: text("link"),
   isRead: boolean("isRead").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const auditLog = mysqlTable("audit_log", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").references(() => internalUsers.id, { onDelete: "set null" }),
+export const auditLog = pgTable("audit_log", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("userId").references(() => internalUsers.id, { onDelete: "set null" }),
   action: varchar("action", { length: 160 }).notNull(),
   targetTable: varchar("targetTable", { length: 120 }),
-  targetId: int("targetId"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  targetId: integer("targetId"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const suppliers = mysqlTable("suppliers", {
-  id: int("id").autoincrement().primaryKey(),
+export const suppliers = pgTable("suppliers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 240 }).notNull(),
-  category: mysqlEnum("category", ["Hebergement", "Outil SaaS Interne", "Partenaire Commercial", "Autre"]),
+  category: varchar("category", { length: 48, enum: ["Hebergement", "Outil SaaS Interne", "Partenaire Commercial", "Autre"] }),
   contactName: varchar("contactName", { length: 200 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
   annualCost: decimal("annualCost", { precision: 12, scale: 2 }).default("0").notNull(),
   contractRenewalDate: date("contractRenewalDate", { mode: "string" }),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const expenses = mysqlTable("expenses", {
-  id: int("id").autoincrement().primaryKey(),
-  supplierId: int("supplierId").references(() => suppliers.id, { onDelete: "set null" }),
+export const expenses = pgTable("expenses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  supplierId: integer("supplierId").references(() => suppliers.id, { onDelete: "set null" }),
   label: varchar("label", { length: 240 }).notNull(),
-  category: mysqlEnum("category", ["Hebergement", "Outils SaaS", "Salaires", "Marketing", "Frais Generaux", "Autre"]),
+  category: varchar("category", { length: 32, enum: ["Hebergement", "Outils SaaS", "Salaires", "Marketing", "Frais Generaux", "Autre"] }),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   expenseDate: date("expenseDate", { mode: "string" }).notNull(),
   isRecurring: boolean("isRecurring").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const bankTransactions = mysqlTable("bank_transactions", {
-  id: int("id").autoincrement().primaryKey(),
+export const bankTransactions = pgTable("bank_transactions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   transactionDate: date("transactionDate", { mode: "string" }).notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  type: mysqlEnum("type", ["Credit", "Debit"]).notNull(),
+  type: varchar("type", { length: 32, enum: ["Credit", "Debit"] }).notNull(),
   description: text("description"),
-  matchedInvoiceId: int("matchedInvoiceId").references(() => invoices.id, {
+  matchedInvoiceId: integer("matchedInvoiceId").references(() => invoices.id, {
     onDelete: "set null",
   }),
-  matchedExpenseId: int("matchedExpenseId").references(() => expenses.id, {
+  matchedExpenseId: integer("matchedExpenseId").references(() => expenses.id, {
     onDelete: "set null",
   }),
   isReconciled: boolean("isReconciled").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const legalDocuments = mysqlTable("legal_documents", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").references(() => organizations.id, {
+export const legalDocuments = pgTable("legal_documents", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  organizationId: integer("organizationId").references(() => organizations.id, {
     onDelete: "cascade",
   }),
-  type: mysqlEnum("type", ["CGU", "CGV", "DPA RGPD", "Contrat Fournisseur", "Certificat HDS", "Statuts", "Autre"]),
+  type: varchar("type", { length: 48, enum: ["CGU", "CGV", "DPA RGPD", "Contrat Fournisseur", "Certificat HDS", "Statuts", "Autre"] }),
   version: varchar("version", { length: 60 }),
   effectiveDate: date("effectiveDate", { mode: "string" }),
   expiryDate: date("expiryDate", { mode: "string" }),
   fileUrl: text("fileUrl"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const leaveRequests = mysqlTable("leave_requests", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId")
+export const leaveRequests = pgTable("leave_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("userId")
     .notNull()
     .references(() => internalUsers.id, { onDelete: "cascade" }),
-  type: mysqlEnum("type", ["Conges Payes", "RTT", "Maladie", "Autre"]).default("Conges Payes").notNull(),
+  type: varchar("type", { length: 32, enum: ["Conges Payes", "RTT", "Maladie", "Autre"] }).default("Conges Payes").notNull(),
   startDate: date("startDate", { mode: "string" }).notNull(),
   endDate: date("endDate", { mode: "string" }).notNull(),
-  status: mysqlEnum("status", ["Demande", "Valide", "Refuse"]).default("Demande").notNull(),
-  validatedBy: int("validatedBy").references(() => internalUsers.id, { onDelete: "set null" }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  status: varchar("status", { length: 32, enum: ["Demande", "Valide", "Refuse"] }).default("Demande").notNull(),
+  validatedBy: integer("validatedBy").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const employeeGoals = mysqlTable("employee_goals", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId")
+export const employeeGoals = pgTable("employee_goals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("userId")
     .notNull()
     .references(() => internalUsers.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 240 }).notNull(),
   targetDate: date("targetDate", { mode: "string" }),
-  status: mysqlEnum("status", ["En Cours", "Atteint", "Non Atteint"]).default("En Cours").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  status: varchar("status", { length: 32, enum: ["En Cours", "Atteint", "Non Atteint"] }).default("En Cours").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const productRequests = mysqlTable("product_requests", {
-  id: int("id").autoincrement().primaryKey(),
-  sourceTicketId: int("sourceTicketId").references(() => supportTickets.id, {
+export const productRequests = pgTable("product_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sourceTicketId: integer("sourceTicketId").references(() => supportTickets.id, {
     onDelete: "set null",
   }),
-  organizationId: int("organizationId").references(() => organizations.id, {
+  organizationId: integer("organizationId").references(() => organizations.id, {
     onDelete: "set null",
   }),
   title: varchar("title", { length: 240 }).notNull(),
   description: text("description"),
-  type: mysqlEnum("type", ["Bug", "Evolution"]).default("Evolution").notNull(),
-  priority: mysqlEnum("priority", ["Basse", "Moyenne", "Haute"]).default("Moyenne").notNull(),
-  status: mysqlEnum("status", ["Idee", "Backlog", "En Developpement", "Livre"]).default("Idee").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  type: varchar("type", { length: 32, enum: ["Bug", "Evolution"] }).default("Evolution").notNull(),
+  priority: varchar("priority", { length: 32, enum: ["Basse", "Moyenne", "Haute"] }).default("Moyenne").notNull(),
+  status: varchar("status", { length: 48, enum: ["Idee", "Backlog", "En Developpement", "Livre"] }).default("Idee").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const changelogEntries = mysqlTable("changelog_entries", {
-  id: int("id").autoincrement().primaryKey(),
+export const changelogEntries = pgTable("changelog_entries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 240 }).notNull(),
   description: text("description"),
   releaseDate: date("releaseDate", { mode: "string" }),
-  type: mysqlEnum("type", ["Nouvelle Fonctionnalite", "Amelioration", "Correction"]).default("Amelioration").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  type: varchar("type", { length: 48, enum: ["Nouvelle Fonctionnalite", "Amelioration", "Correction"] }).default("Amelioration").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const knowledgeBaseArticles = mysqlTable("knowledge_base_articles", {
-  id: int("id").autoincrement().primaryKey(),
+export const knowledgeBaseArticles = pgTable("knowledge_base_articles", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 240 }).notNull(),
-  category: mysqlEnum("category", ["Commercial", "Support", "Marketing", "General"]).default("General").notNull(),
+  category: varchar("category", { length: 32, enum: ["Commercial", "Support", "Marketing", "General"] }).default("General").notNull(),
   content: text("content").notNull(),
-  authorId: int("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  authorId: integer("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;

@@ -3,8 +3,7 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerStorageProxy } from "./storageProxy";
+import { registerFileRoutes } from "./fileRoutes";
 import { appRouter } from "../routers";
 import { runCustomerSuccessAlerts } from "../customer-success.scheduler";
 import { runSupportAlerts } from "../support.scheduler";
@@ -37,8 +36,7 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  registerStorageProxy(app);
-  registerOAuthRoutes(app);
+  registerFileRoutes(app);
   app.post("/api/scheduled/customer-success-alerts", runCustomerSuccessAlerts);
   app.post("/api/scheduled/support-alerts", runSupportAlerts);
   app.options("/api/public/marketing/leads", (req, res) => { applyLeadCaptureCors(req, res); res.sendStatus(204); });

@@ -15,7 +15,7 @@ import {
   supportTickets,
 } from "../drizzle/schema";
 import { requireDb } from "./db";
-import { storagePut } from "./storage";
+import { storagePut, storageUrlFor } from "./storage";
 import {
   buildSupportAlertCandidates,
   calculateSupportMetrics,
@@ -117,8 +117,8 @@ export async function createTicket(data: Omit<typeof supportTickets.$inferInsert
     ...data,
     createdAt,
     slaDueAt: computeSlaDueAt(createdAt, data.priority as SupportPriority),
-  });
-  const id = Number(result[0].insertId);
+  }).returning({ id: supportTickets.id });
+  const id = result[0].id;
   await db.insert(supportTicketEvents).values({ ticketId: id, authorId: authorId ?? null, eventType: "Changement Statut", content: "Ticket créé avec le statut Nouveau." });
   return { id };
 }
@@ -148,12 +148,12 @@ export async function deleteTicket(id: number) {
 
 export async function addTicketEvent(data: typeof supportTicketEvents.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(supportTicketEvents).values(data);
+  const result = await db.insert(supportTicketEvents).values(data).returning({ id: supportTicketEvents.id });
   const ticket = (await db.select().from(supportTickets).where(eq(supportTickets.id, data.ticketId)).limit(1))[0];
   if (ticket && !ticket.firstRespondedAt) {
     await db.update(supportTickets).set({ firstRespondedAt: new Date(), status: ticket.status === "Nouveau" ? "En cours" : ticket.status }).where(eq(supportTickets.id, data.ticketId));
   }
-  return { id: Number(result[0].insertId) };
+  return { id: result[0].id };
 }
 
 export async function listTasks(input?: { search?: string; status?: string; assignedTo?: number }) {
@@ -186,8 +186,8 @@ export async function listTasks(input?: { search?: string; status?: string; assi
 
 export async function createTask(data: typeof adminTasks.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(adminTasks).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(adminTasks).values(data).returning({ id: adminTasks.id });
+  return { id: result[0].id };
 }
 
 export async function updateTask(id: number, data: Partial<typeof adminTasks.$inferInsert>) {
@@ -236,8 +236,8 @@ export async function listInvoices(input?: { search?: string; status?: string })
 
 export async function createInvoice(data: typeof invoices.$inferInsert, userId?: number | null) {
   const db = await requireDb();
-  const result = await db.insert(invoices).values(data);
-  const id = Number(result[0].insertId);
+  const result = await db.insert(invoices).values(data).returning({ id: invoices.id });
+  const id = result[0].id;
   await audit("CREATE", "invoices", id, userId);
   return { id };
 }
@@ -295,17 +295,21 @@ export async function listContracts(input?: { search?: string; status?: string; 
     .leftJoin(organizations, eq(establishmentContracts.organizationId, organizations.id))
     .orderBy(asc(establishmentContracts.endDate), desc(establishmentContracts.createdAt));
   const term = input?.search?.trim().toLowerCase();
-  return rows.map(row => ({ ...row, daysUntilEnd: daysUntil(row.endDate) })).filter(row =>
+  const filtered = rows.map(row => ({ ...row, daysUntilEnd: daysUntil(row.endDate) })).filter(row =>
     (!term || [row.title, row.organizationName || ""].some(value => value.toLowerCase().includes(term)))
     && (!input?.status || input.status === "Tous" || row.status === input.status)
     && (!input?.type || input.type === "Tous" || row.type === input.type)
+  );
+  // Voir `listAssets` : le lien vers le document est signé à chaque lecture.
+  return Promise.all(
+    filtered.map(async row => ({ ...row, documentUrl: (await storageUrlFor(row.documentKey)) ?? row.documentUrl }))
   );
 }
 
 export async function createContract(data: typeof establishmentContracts.$inferInsert, userId?: number | null) {
   const db = await requireDb();
-  const result = await db.insert(establishmentContracts).values(data);
-  const id = Number(result[0].insertId);
+  const result = await db.insert(establishmentContracts).values(data).returning({ id: establishmentContracts.id });
+  const id = result[0].id;
   await audit("CREATE", "establishment_contracts", id, userId);
   return { id };
 }
@@ -365,8 +369,8 @@ export async function listEvents(input?: { from?: Date; to?: Date; type?: string
 
 export async function createEvent(data: typeof calendarEvents.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(calendarEvents).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(calendarEvents).values(data).returning({ id: calendarEvents.id });
+  return { id: result[0].id };
 }
 
 export async function updateEvent(id: number, data: Partial<typeof calendarEvents.$inferInsert>) {
@@ -403,7 +407,7 @@ export async function refreshSupportAlerts(referenceDate = new Date()) {
   let active = 0;
   for (const candidate of candidates) {
     if (ignoredKeys.has(candidate.dedupeKey)) continue;
-    await db.insert(supportAlerts).values(candidate).onDuplicateKeyUpdate({ set: { severity: candidate.severity, title: candidate.title, message: candidate.message, dueAt: candidate.dueAt, link: candidate.link, status: "Ouverte", resolvedAt: null } });
+    await db.insert(supportAlerts).values(candidate).onConflictDoUpdate({ target: supportAlerts.dedupeKey, set: { severity: candidate.severity, title: candidate.title, message: candidate.message, dueAt: candidate.dueAt, link: candidate.link, status: "Ouverte", resolvedAt: null } });
     active += 1;
   }
   for (const invoice of invoiceRows.filter(item => item.status === "Envoyee" && Number(daysUntil(item.dueDate, referenceDate)) < 0)) {
@@ -412,7 +416,7 @@ export async function refreshSupportAlerts(referenceDate = new Date()) {
   for (const contract of contractRows.filter(item => item.status === "Actif" && Number(daysUntil(item.endDate, referenceDate)) < 0)) {
     await db.update(establishmentContracts).set({ status: "Expire" }).where(eq(establishmentContracts.id, contract.id));
   }
-  await db.insert(supportAutomations).values({ name: "daily-support-alerts", enabled: false, lastRunAt: referenceDate }).onDuplicateKeyUpdate({ set: { lastRunAt: referenceDate } });
+  await db.insert(supportAutomations).values({ name: "daily-support-alerts", enabled: false, lastRunAt: referenceDate }).onConflictDoUpdate({ target: supportAutomations.name, set: { lastRunAt: referenceDate } });
   return { alerts: active, processed: ticketRows.length + taskRows.length + invoiceRows.length + contractRows.length + eventRows.length, ranAt: referenceDate };
 }
 
@@ -421,13 +425,9 @@ export async function getSupportAutomation() {
   return (await db.select().from(supportAutomations).where(eq(supportAutomations.name, "daily-support-alerts")).limit(1))[0] || null;
 }
 
-export async function getSupportAutomationByTaskUid(taskUid: string) {
+/** Voir `setCustomerAutomationEnabled` : la planification est portée par pg_cron. */
+export async function setSupportAutomationEnabled(enabled: boolean) {
   const db = await requireDb();
-  return (await db.select().from(supportAutomations).where(eq(supportAutomations.scheduleCronTaskUid, taskUid)).limit(1))[0] || null;
-}
-
-export async function updateSupportAutomationTaskUid(taskUid: string | null, enabled: boolean) {
-  const db = await requireDb();
-  await db.insert(supportAutomations).values({ name: "daily-support-alerts", scheduleCronTaskUid: taskUid, enabled }).onDuplicateKeyUpdate({ set: { scheduleCronTaskUid: taskUid, enabled } });
+  await db.insert(supportAutomations).values({ name: "daily-support-alerts", enabled }).onConflictDoUpdate({ target: supportAutomations.name, set: { enabled } });
   return { success: true } as const;
 }

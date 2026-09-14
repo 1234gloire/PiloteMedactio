@@ -12,7 +12,7 @@ import {
 } from "../drizzle/schema";
 import { requireDb } from "./db";
 import { calculateMarketingMetrics } from "./marketing.logic";
-import { storagePut } from "./storage";
+import { storagePut, storageUrlFor } from "./storage";
 
 export type LeadCaptureInput = {
   campaignId?: number | null;
@@ -106,8 +106,8 @@ export async function getCampaign(id: number) {
 
 export async function createCampaign(data: typeof marketingCampaigns.$inferInsert) {
   const db = await requireDb();
-  const result = await db.insert(marketingCampaigns).values(data);
-  return { id: Number(result[0].insertId) };
+  const result = await db.insert(marketingCampaigns).values(data).returning({ id: marketingCampaigns.id });
+  return { id: result[0].id };
 }
 export async function updateCampaign(id: number, data: Partial<typeof marketingCampaigns.$inferInsert>) { const db = await requireDb(); await db.update(marketingCampaigns).set(data).where(eq(marketingCampaigns.id, id)); return { success: true } as const; }
 export async function deleteCampaign(id: number) { const db = await requireDb(); await db.delete(marketingCampaigns).where(eq(marketingCampaigns.id, id)); return { success: true } as const; }
@@ -133,7 +133,7 @@ export async function listContent(input?: { search?: string; status?: string; ty
     && (!input?.campaignId || item.campaignId === input.campaignId)
   );
 }
-export async function createContent(data: typeof contentCalendar.$inferInsert) { const db = await requireDb(); const result = await db.insert(contentCalendar).values(data); return { id: Number(result[0].insertId) }; }
+export async function createContent(data: typeof contentCalendar.$inferInsert) { const db = await requireDb(); const result = await db.insert(contentCalendar).values(data).returning({ id: contentCalendar.id }); return { id: result[0].id }; }
 export async function updateContent(id: number, data: Partial<typeof contentCalendar.$inferInsert>) { const db = await requireDb(); await db.update(contentCalendar).set(data).where(eq(contentCalendar.id, id)); return { success: true } as const; }
 export async function deleteContent(id: number) { const db = await requireDb(); await db.delete(contentCalendar).where(eq(contentCalendar.id, id)); return { success: true } as const; }
 
@@ -174,16 +174,14 @@ export async function captureLead(input: LeadCaptureInput) {
 
   let organization = (await db.select().from(organizations).where(eq(organizations.name, input.organizationName)).limit(1))[0];
   if (!organization) {
-    const created = await db.insert(organizations).values({ name: input.organizationName, type: input.organizationType, status: "Prospect", leadSource: "Site Web" });
-    organization = (await db.select().from(organizations).where(eq(organizations.id, Number(created[0].insertId))).limit(1))[0];
+    organization = (await db.insert(organizations).values({ name: input.organizationName, type: input.organizationType, status: "Prospect", leadSource: "Site Web" }).returning())[0];
   }
   let contact = (await db.select().from(contacts).where(eq(contacts.email, input.email.toLowerCase())).limit(1))[0];
   if (!contact) {
-    const created = await db.insert(contacts).values({ organizationId: organization.id, fullName: input.fullName, email: input.email.toLowerCase(), phone: input.phone, jobTitle: input.jobTitle });
-    contact = (await db.select().from(contacts).where(eq(contacts.id, Number(created[0].insertId))).limit(1))[0];
+    contact = (await db.insert(contacts).values({ organizationId: organization.id, fullName: input.fullName, email: input.email.toLowerCase(), phone: input.phone, jobTitle: input.jobTitle }).returning())[0];
   }
-  const result = await db.insert(marketingLeads).values({ ...input, email: input.email.toLowerCase(), campaignId, organizationId: organization.id, contactId: contact.id, source: input.source ?? "Site Web" });
-  const id = Number(result[0].insertId);
+  const result = await db.insert(marketingLeads).values({ ...input, email: input.email.toLowerCase(), campaignId, organizationId: organization.id, contactId: contact.id, source: input.source ?? "Site Web" }).returning({ id: marketingLeads.id });
+  const id = result[0].id;
   if (campaignId) await db.update(marketingCampaigns).set({ leadsGenerated: sql`${marketingCampaigns.leadsGenerated} + 1` }).where(eq(marketingCampaigns.id, campaignId));
   return { id, duplicate: false, organizationId: organization.id, contactId: contact.id };
 }
@@ -205,8 +203,8 @@ export async function promoteLeadToDeal(id: number, input: { assignedTo?: number
     organizationId: lead.organizationId, assignedTo: input.assignedTo ?? null, campaignId: lead.campaignId,
     title: `Opportunité — ${lead.organizationName}`, amount: input.amount ?? "0", stage: "Rendez-vous Place",
     expectedCloseDate: input.expectedCloseDate ?? null, notes: `Créée depuis le lead marketing ${lead.fullName} (${lead.email}).`,
-  });
-  const dealId = Number(result[0].insertId);
+  }).returning({ id: deals.id });
+  const dealId = result[0].id;
   await db.update(marketingLeads).set({ dealId, status: "RDV Planifie", qualifiedAt: new Date() }).where(eq(marketingLeads.id, id));
   return { id: dealId, existing: false };
 }
@@ -223,7 +221,7 @@ export async function listEvents(input?: { campaignId?: number; status?: string 
   }).from(marketingEvents).leftJoin(marketingCampaigns, eq(marketingEvents.campaignId, marketingCampaigns.id)).orderBy(asc(marketingEvents.scheduledAt));
   return rows.filter(item => (!input?.campaignId || item.campaignId === input.campaignId) && (!input?.status || input.status === "Tous" || item.status === input.status));
 }
-export async function createEvent(data: typeof marketingEvents.$inferInsert) { const db = await requireDb(); const result = await db.insert(marketingEvents).values(data); return { id: Number(result[0].insertId) }; }
+export async function createEvent(data: typeof marketingEvents.$inferInsert) { const db = await requireDb(); const result = await db.insert(marketingEvents).values(data).returning({ id: marketingEvents.id }); return { id: result[0].id }; }
 export async function updateEvent(id: number, data: Partial<typeof marketingEvents.$inferInsert>) { const db = await requireDb(); await db.update(marketingEvents).set(data).where(eq(marketingEvents.id, id)); return { success: true } as const; }
 export async function deleteEvent(id: number) { const db = await requireDb(); await db.delete(marketingEvents).where(eq(marketingEvents.id, id)); return { success: true } as const; }
 
@@ -240,10 +238,15 @@ export async function listAssets(input?: { search?: string; type?: string; campa
     .leftJoin(internalUsers, eq(marketingAssets.createdBy, internalUsers.id))
     .orderBy(desc(marketingAssets.createdAt));
   const search = input?.search?.trim().toLowerCase();
-  return rows.filter(item =>
+  const filtered = rows.filter(item =>
     (!search || [item.title, item.fileName, item.description || ""].some(value => value.toLowerCase().includes(search)))
     && (!input?.type || input.type === "Tous" || item.assetType === input.type)
     && (!input?.campaignId || item.campaignId === input.campaignId)
+  );
+  // L'URL de téléchargement est signée à chaque lecture : rien de permanent
+  // n'est exposé, et le lien expire au bout d'une heure.
+  return Promise.all(
+    filtered.map(async item => ({ ...item, fileUrl: (await storageUrlFor(item.storageKey)) ?? item.fileUrl }))
   );
 }
 
@@ -254,7 +257,7 @@ export async function uploadAsset(data: { campaignId?: number | null; title: str
   if (bytes.length > 10 * 1024 * 1024) throw new Error("Le support dépasse la limite de 10 Mo.");
   const safeName = data.fileName.replace(/[^a-zA-Z0-9._-]+/g, "-");
   const uploaded = await storagePut(`marketing/assets/${data.campaignId || "shared"}/${safeName}`, bytes, data.mimeType || "application/octet-stream");
-  const result = await db.insert(marketingAssets).values({ campaignId: data.campaignId ?? null, title: data.title, assetType: data.assetType, description: data.description, storageKey: uploaded.key, fileUrl: uploaded.url, fileName: data.fileName, mimeType: data.mimeType, sizeBytes: bytes.length, createdBy: userId });
-  return { id: Number(result[0].insertId), ...uploaded };
+  const result = await db.insert(marketingAssets).values({ campaignId: data.campaignId ?? null, title: data.title, assetType: data.assetType, description: data.description, storageKey: uploaded.key, fileUrl: uploaded.url, fileName: data.fileName, mimeType: data.mimeType, sizeBytes: bytes.length, createdBy: userId }).returning({ id: marketingAssets.id });
+  return { id: result[0].id, ...uploaded };
 }
 export async function deleteAsset(id: number) { const db = await requireDb(); await db.delete(marketingAssets).where(eq(marketingAssets.id, id)); return { success: true } as const; }

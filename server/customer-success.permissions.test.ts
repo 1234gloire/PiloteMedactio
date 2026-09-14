@@ -28,7 +28,7 @@ import { customerSuccessRouter } from "./routers/customer-success";
 
 function context(): TrpcContext {
   return {
-    user: { id: 1, openId: "test-user", email: "test@medactio.fr", name: "Utilisateur test", loginMethod: "manus", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+    user: { id: 1, openId: "test-user", email: "test@medactio.fr", name: "Utilisateur test", loginMethod: "supabase", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };

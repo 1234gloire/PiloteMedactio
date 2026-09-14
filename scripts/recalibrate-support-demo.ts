@@ -1,11 +1,11 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import { calendarEvents } from "../drizzle/schema";
 
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   const rows = await db.select().from(calendarEvents).where(eq(calendarEvents.title, "Point support hebdomadaire"));
   let updated = 0;
   for (const row of rows) {

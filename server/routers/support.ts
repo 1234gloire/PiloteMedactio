@@ -1,8 +1,5 @@
-import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
-import { parse as parseCookie } from "cookie";
 import { z } from "zod";
-import { createHeartbeatJob, deleteHeartbeatJob, updateHeartbeatJob } from "../_core/heartbeat";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import * as supportDb from "../support.db";
@@ -84,10 +81,6 @@ const eventInput = z.object({
   location: z.string().trim().max(240).optional().nullable(),
 });
 
-function sessionTokenFrom(ctx: { req: { headers: { cookie?: string } } }) {
-  return parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";
-}
-
 export const supportRouter = router({
   profile: protectedProcedure.query(({ ctx }) => profileFor(ctx)),
   users: protectedProcedure.query(() => db.listInternalUsers()),
@@ -139,25 +132,12 @@ export const supportRouter = router({
     status: protectedProcedure.query(() => supportDb.getSupportAutomation()),
     enable: protectedProcedure.mutation(async ({ ctx }) => {
       await requireSupportWrite(ctx);
-      const token = sessionTokenFrom(ctx);
-      if (!token) throw new TRPCError({ code: "UNAUTHORIZED", message: "Reconnectez-vous avant d’activer l’automatisation." });
-      const current = await supportDb.getSupportAutomation();
-      if (current?.scheduleCronTaskUid) {
-        await updateHeartbeatJob(current.scheduleCronTaskUid, { enable: true, cron: "0 30 6 * * *" }, token);
-        await supportDb.updateSupportAutomationTaskUid(current.scheduleCronTaskUid, true);
-        return { taskUid: current.scheduleCronTaskUid, enabled: true };
-      }
-      const job = await createHeartbeatJob({ name: "daily-support-alerts", cron: "0 30 6 * * *", path: "/api/scheduled/support-alerts", description: "Contrôle quotidien des SLA, tâches, impayés, contrats et rendez-vous Medactio." }, token);
-      await supportDb.updateSupportAutomationTaskUid(job.taskUid, true);
-      return { taskUid: job.taskUid, enabled: true, nextExecutionAt: job.nextExecutionAt };
+      await supportDb.setSupportAutomationEnabled(true);
+      return { enabled: true };
     }),
     disable: protectedProcedure.mutation(async ({ ctx }) => {
       await requireSupportWrite(ctx);
-      const token = sessionTokenFrom(ctx);
-      const current = await supportDb.getSupportAutomation();
-      if (!current?.scheduleCronTaskUid) return { enabled: false };
-      await deleteHeartbeatJob(current.scheduleCronTaskUid, token);
-      await supportDb.updateSupportAutomationTaskUid(null, false);
+      await supportDb.setSupportAutomationEnabled(false);
       return { enabled: false };
     }),
   }),

@@ -56,7 +56,7 @@ async function smoke() {
   console.log("Smoke Clients & Licences réussi : abonnement, onboarding, licence, usage et alertes vérifiés.");
 }
 
-smoke().catch(error => {
+smoke().then(() => process.exit(0)).catch(error => {
   console.error(error);
   process.exit(1);
 });

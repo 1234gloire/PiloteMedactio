@@ -1,15 +1,14 @@
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import { internalUsers, marketingCampaigns, organizations, usageLogs } from "../drizzle/schema";
 
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   let marketing = (await db.select().from(internalUsers).where(eq(internalUsers.email, "marketing@medactio.fr")).limit(1))[0];
   if (!marketing) {
-    const result = await db.insert(internalUsers).values({ fullName: "Sophie Martin", email: "marketing@medactio.fr", role: "marketing", jobTitle: "Responsable Marketing" });
-    marketing = (await db.select().from(internalUsers).where(eq(internalUsers.id, Number(result[0].insertId))).limit(1))[0];
+    marketing = (await db.insert(internalUsers).values({ fullName: "Sophie Martin", email: "marketing@medactio.fr", role: "marketing", jobTitle: "Responsable Marketing" }).returning())[0];
   }
 
   const campaigns = [
