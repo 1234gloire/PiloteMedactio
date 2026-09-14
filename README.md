@@ -1,6 +1,6 @@
 # Medactio Pilotage — MVP V1
 
-Cette version du MVP fournit trois pôles opérationnels : le **CRM Commercial & B2B**, la **Gestion des Clients & Licences** et le **pôle Secrétariat & Support**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
+Cette version du MVP fournit quatre pôles opérationnels : le **CRM Commercial & B2B**, la **Gestion des Clients & Licences**, le **pôle Secrétariat & Support** et le **pôle Direction & Analytics**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
 
 ## Fonctionnalités livrées
 
@@ -26,6 +26,10 @@ Cette version du MVP fournit trois pôles opérationnels : le **CRM Commercial &
 | Conventions & contrats | Dates clés, statut, échéance de renouvellement et document associé stocké hors base |
 | Agenda partagé | Rendez-vous internes et clients, démonstrations et échéances, avec rattachement aux établissements et contacts |
 | Alertes Support | Détection idempotente des SLA dépassés, tâches proches, impayés, contrats à renouveler et rendez-vous à venir |
+| Dashboard Direction | MRR, ARR, clients actifs, churn, CAC, LTV, usages, pipeline pondéré, encaissements et alertes exécutives |
+| Reporting par pôle | Rapports Commercial, Clients & SaaS, Support et Marketing avec performances par collaborateur |
+| Usage global | Historique mensuel des écrits générés et des requêtes IA toutes organisations confondues |
+| Exports Direction | CSV compatible tableur et rapport exécutif PDF A4 généré localement |
 | Sécurité | Authentification, profils internes, accès financier restreint et contrôle d’écriture selon le rôle métier |
 
 ## Architecture de cette livraison
@@ -61,6 +65,8 @@ Le test d’intégration CRUD crée, vérifie puis supprime ses propres données
 pnpm tsx scripts/smoke-crud.ts
 pnpm tsx scripts/smoke-customer-success.ts
 pnpm tsx scripts/smoke-support.ts
+pnpm tsx scripts/smoke-analytics.ts
+pnpm tsx scripts/smoke-analytics-pdf.ts
 ```
 
 Le jeu de démonstration du deuxième pôle se charge séparément et peut être rejoué sans dupliquer les abonnements :
@@ -68,6 +74,21 @@ Le jeu de démonstration du deuxième pôle se charge séparément et peut être
 ```bash
 pnpm tsx scripts/seed-customer-success.ts
 pnpm tsx scripts/seed-support.ts
+pnpm tsx scripts/seed-analytics.ts
+
+## Conventions des indicateurs Direction
+
+| Indicateur | Convention V1 |
+|---|---|
+| MRR | Abonnements mensuels actifs + valeur annuelle active divisée par 12 |
+| ARR | MRR × 12 |
+| Churn | Résiliations observées rapportées à la base active et résiliée de la période, puis annualisées |
+| CAC | Budgets marketing engagés sur la période / nouveaux clients gagnés |
+| LTV indicative | Revenu mensuel moyen par client × marge brute conventionnelle de 80 % / churn mensuel |
+| Pipeline pondéré | Montant de chaque opportunité ouverte × probabilité de son étape |
+| Encaissements attendus | Factures envoyées ou en retard non encore réglées |
+
+Les écrans affichent explicitement la période d’analyse et la date d’arrêté. Le CAC et la LTV restent des estimations de pilotage tant que les coûts complets d’acquisition et la marge brute comptable ne sont pas synchronisés.
 ```
 
 ## Alertes et traitements automatiques
@@ -102,4 +123,4 @@ Cette plateforme est un outil de pilotage interne et ne doit pas recevoir de don
 
 ## Prochaine étape recommandée
 
-Après validation des trois premiers pôles, le prochain lot du MVP est le **pôle Direction & Analytics** afin de consolider les indicateurs commerciaux, SaaS, support et financiers déjà disponibles.
+Après validation de ces quatre pôles, le prochain lot du MVP est le **pôle Marketing & Contenu** afin de transformer les campagnes déjà mesurées dans Analytics en workflows opérationnels complets.

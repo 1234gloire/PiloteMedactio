@@ -506,6 +506,7 @@ export const usageLogs = mysqlTable("usage_logs", {
     .references(() => organizations.id, { onDelete: "cascade" }),
   contactId: int("contactId").references(() => contacts.id, { onDelete: "cascade" }),
   documentsGeneratedCount: int("documentsGeneratedCount").default(1).notNull(),
+  aiRequestsCount: int("aiRequestsCount").default(0).notNull(),
   logDate: date("logDate", { mode: "string" }).notNull(),
 });
 

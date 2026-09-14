@@ -206,6 +206,8 @@ export async function getCustomer(organizationId: number) {
       ...contact,
       documentsLast30: logs.filter(log => log.logDate >= last30Start).reduce((sum, log) => sum + log.documentsGeneratedCount, 0),
       documentsAllTime: logs.reduce((sum, log) => sum + log.documentsGeneratedCount, 0),
+      aiRequestsLast30: logs.filter(log => log.logDate >= last30Start).reduce((sum, log) => sum + log.aiRequestsCount, 0),
+      aiRequestsAllTime: logs.reduce((sum, log) => sum + log.aiRequestsCount, 0),
       lastUsageDate: logs.length ? logs[logs.length - 1]?.logDate || null : null,
     };
   });
@@ -216,6 +218,7 @@ export async function getCustomer(organizationId: number) {
       month,
       label: new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(date),
       documents: usage.filter(log => log.logDate.startsWith(month)).reduce((sum, log) => sum + log.documentsGeneratedCount, 0),
+      aiRequests: usage.filter(log => log.logDate.startsWith(month)).reduce((sum, log) => sum + log.aiRequestsCount, 0),
     };
   });
   return {

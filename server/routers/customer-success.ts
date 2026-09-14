@@ -96,6 +96,7 @@ export const customerSuccessRouter = router({
       organizationId: z.number().int().positive(),
       contactId: z.number().int().positive().optional().nullable(),
       documentsGeneratedCount: z.coerce.number().int().positive().max(100000),
+      aiRequestsCount: z.coerce.number().int().min(0).max(1000000).default(0),
       logDate: z.string().date(),
     })).mutation(async ({ ctx, input }) => {
       await requireCustomerWrite(ctx);

@@ -22,6 +22,9 @@ import SupportCalendar from "./pages/SupportCalendar";
 import SupportDashboard from "./pages/SupportDashboard";
 import SupportTicketDetail from "./pages/SupportTicketDetail";
 import SupportTickets from "./pages/SupportTickets";
+import DirectionDashboard from "./pages/DirectionDashboard";
+import DirectionExports from "./pages/DirectionExports";
+import DirectionReport from "./pages/DirectionReport";
 
 function Router() {
   return <DashboardLayout><Switch>
@@ -42,6 +45,12 @@ function Router() {
     <Route path="/support/factures" component={Invoices} />
     <Route path="/support/contrats" component={Contracts} />
     <Route path="/support/agenda" component={SupportCalendar} />
+    <Route path="/direction" component={DirectionDashboard} />
+    <Route path="/direction/commercial"><DirectionReport pole="commercial" /></Route>
+    <Route path="/direction/clients"><DirectionReport pole="clients" /></Route>
+    <Route path="/direction/support"><DirectionReport pole="support" /></Route>
+    <Route path="/direction/marketing"><DirectionReport pole="marketing" /></Route>
+    <Route path="/direction/exports" component={DirectionExports} />
     <Route component={NotFound} />
   </Switch></DashboardLayout>;
 }
