@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import {
   adminTasks,
   calendarEvents,
@@ -27,7 +27,7 @@ const addHours = (hours: number) => new Date(Date.now() + hours * 3_600_000);
 
 async function seed() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   const existing = await db.select({ id: calendarEvents.id }).from(calendarEvents).limit(1);
   if (existing.length) {
     const result = await refreshSupportAlerts();
@@ -110,7 +110,7 @@ async function seed() {
   console.log(`Jeu de démonstration Support créé : ${result.processed} éléments et ${result.alerts} alertes analysés.`);
 }
 
-seed().catch(error => {
+seed().then(() => process.exit(0)).catch(error => {
   console.error(error);
   process.exit(1);
 });

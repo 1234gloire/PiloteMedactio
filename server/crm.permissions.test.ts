@@ -16,7 +16,7 @@ function context(): TrpcContext {
       openId: "test-user",
       email: "test@medactio.fr",
       name: "Utilisateur test",
-      loginMethod: "manus",
+      loginMethod: "supabase",
       role: "user",
       createdAt: new Date(),
       updatedAt: new Date(),

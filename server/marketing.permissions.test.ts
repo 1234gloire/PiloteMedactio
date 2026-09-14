@@ -12,7 +12,7 @@ import * as db from "./db";
 import * as marketingDb from "./marketing.db";
 import { marketingRouter } from "./routers/marketing";
 
-function context(): TrpcContext { return { user: { id: 1, openId: "test", email: "test@medactio.fr", name: "Test", loginMethod: "manus", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] }; }
+function context(): TrpcContext { return { user: { id: 1, openId: "test", email: "test@medactio.fr", name: "Test", loginMethod: "supabase", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] }; }
 function profile(role: "admin" | "direction" | "commercial" | "marketing" | "secretariat" | "finance") { return { id: 7, userId: 1, fullName: "Profil test", email: "profil@medactio.fr", role, jobTitle: null, hireDate: null, createdAt: new Date() }; }
 const campaign = { name: "Campagne test", channel: "Webinaire" as const, objective: "Générer des leads", budget: 1000, targetLeads: 20, attributedRevenue: 0, startDate: "2026-09-01", endDate: "2026-10-01", status: "En Cours" as const, ownerId: null };
 

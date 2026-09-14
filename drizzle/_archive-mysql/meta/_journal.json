@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1789140506805,
+      "tag": "0000_warm_trish_tilby",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1789140657563,
+      "tag": "0001_aspiring_namor",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1789144157339,
+      "tag": "0002_hesitant_redwing",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1789248543814,
+      "tag": "0003_marvelous_dreadnoughts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1789249829578,
+      "tag": "0004_tired_eternity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1789381357158,
+      "tag": "0005_skinny_doctor_faustus",
+      "breakpoints": true
+    }
+  ]
+}

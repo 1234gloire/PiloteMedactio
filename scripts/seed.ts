@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import { eq } from "drizzle-orm";
 import {
   contacts,
@@ -13,7 +13,7 @@ import {
 
 async function seed() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   const existing = await db.select({ id: organizations.id }).from(organizations).limit(1);
   if (existing.length) {
     console.log("Le jeu de démonstration existe déjà.");
@@ -93,7 +93,7 @@ async function seed() {
   console.log("Jeu de démonstration CRM créé avec succès.");
 }
 
-seed().catch(error => {
+seed().then(() => process.exit(0)).catch(error => {
   console.error(error);
   process.exit(1);
 });

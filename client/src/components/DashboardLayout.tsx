@@ -3,11 +3,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { Activity, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, Columns3, Download, FileCheck2, Headphones, HeartPulse, LayoutDashboard, LogOut, Megaphone, PanelLeft, ReceiptText, ShieldCheck, Target, UserRound, UserRoundPlus, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import LoginScreen from "./LoginScreen";
 
 const primaryItems = [
   { icon: LayoutDashboard, label: "Vue d’ensemble", path: "/" },
@@ -52,17 +52,8 @@ const directionNavItems = directionItems.filter(item => ["/direction", "/directi
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
   if (loading) return <DashboardLayoutSkeleton />;
-  if (!user) {
-    return <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8f8] p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(18,111,105,.12),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(18,54,83,.10),transparent_42%)]" />
-      <div className="relative w-full max-w-md rounded-3xl border border-white/80 bg-white/90 p-8 shadow-[0_24px_80px_rgba(18,54,83,.12)] backdrop-blur">
-        <div className="mb-8 flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#123653] text-lg font-bold text-white">M</div><div><p className="text-lg font-semibold tracking-tight text-[#123653]">MEDACTIO</p><p className="text-xs font-medium uppercase tracking-[.18em] text-teal-700">Pilotage</p></div></div>
-        <div className="mb-8"><div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800"><ShieldCheck className="h-3.5 w-3.5" /> Espace interne sécurisé</div><h1 className="text-3xl font-semibold tracking-tight text-slate-950">Bienvenue dans votre cockpit de pilotage.</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Coordonnez l’activité commerciale, les clients, le support et les indicateurs stratégiques de Medactio.</p></div>
-        <Button onClick={() => startLogin()} size="lg" className="h-12 w-full bg-[#123653] text-white hover:bg-[#0b2941]">Se connecter</Button>
-        <p className="mt-5 text-center text-xs text-muted-foreground">Accès réservé à l’équipe Medactio</p>
-      </div>
-    </div>;
-  }
+  if (!user) return <LoginScreen />;
+
   return <SidebarProvider><DashboardContent>{children}</DashboardContent></SidebarProvider>;
 }
 

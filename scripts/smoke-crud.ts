@@ -56,7 +56,7 @@ async function smoke() {
   console.log("Smoke CRUD réussi : création, lecture, mise à jour et suppression vérifiées.");
 }
 
-smoke().catch(error => {
+smoke().then(() => process.exit(0)).catch(error => {
   console.error(error);
   process.exit(1);
 });

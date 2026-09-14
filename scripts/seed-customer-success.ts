@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import {
   contacts,
   customerOnboardingTasks,
@@ -16,7 +16,7 @@ const addDays = (days: number) => new Date(Date.now() + days * 86_400_000);
 
 async function seed() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   const existingSubscription = await db.select({ id: subscriptions.id }).from(subscriptions).limit(1);
   if (existingSubscription.length) {
     await refreshCustomerAlerts();
@@ -115,7 +115,7 @@ async function seed() {
   console.log(`Jeu de démonstration Succès Client créé : ${result.processedCustomers} comptes et ${result.alerts} alertes analysés.`);
 }
 
-seed().catch(error => {
+seed().then(() => process.exit(0)).catch(error => {
   console.error(error);
   process.exit(1);
 });

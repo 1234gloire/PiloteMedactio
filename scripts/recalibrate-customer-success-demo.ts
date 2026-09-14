@@ -1,12 +1,12 @@
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createDb } from "../drizzle/client";
 import { organizations, subscriptions } from "../drizzle/schema";
 import { refreshCustomerAlerts } from "../server/customer-success.db";
 
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquante");
-  const db = drizzle(process.env.DATABASE_URL);
+  const db = createDb(process.env.DATABASE_URL);
   const plans = [
     ["Centre Hospitalier de Chartres", "Établissement 2", 2, "12000"],
     ["CH Intercommunal de Créteil", "Établissement 2", 2, "13500"],
@@ -25,7 +25,7 @@ async function run() {
   console.log(`Démonstration recalibrée : ${result.processedCustomers} comptes analysés.`);
 }
 
-run().catch(error => {
+run().then(() => process.exit(0)).catch(error => {
   console.error(error);
   process.exit(1);
 });

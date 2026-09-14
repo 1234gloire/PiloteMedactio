@@ -38,52 +38,88 @@ Cette version du MVP fournit cinq pôles opérationnels : le **CRM Commercial & 
 | Exports Direction | CSV compatible tableur et rapport exécutif PDF A4 généré localement |
 | Sécurité | Authentification, profils internes, accès financier restreint et contrôle d’écriture selon le rôle métier |
 
-## Architecture de cette livraison
+## Architecture
 
-La prévisualisation hébergée utilise le socle full-stack géré de l’environnement : **React 19, TypeScript, Tailwind CSS, shadcn/ui, tRPC, Drizzle ORM, base SQL et authentification OAuth**. La migration cible Supabase/PostgreSQL demandée dans le cahier des charges est fournie dans `supabase/migrations/20260911_initial_schema.sql` avec le schéma V1/V2, les clés étrangères, les politiques RLS et l’audit des tables sensibles. Elle pourra être appliquée lors du raccordement au projet Supabase de production.
+| Couche | Technologie |
+|---|---|
+| Interface | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| API | Express + tRPC (typage bout en bout) |
+| Base de données | PostgreSQL (Supabase), accès via Drizzle ORM |
+| Authentification | Supabase Auth — lien magique par email |
+| Documents | Supabase Storage, compartiment privé et URL signées |
+| Traitements planifiés | pg_cron (Supabase) vers `/api/scheduled/*` |
+
+L'application est autonome : elle ne dépend d'aucune plateforme propriétaire et
+peut être hébergée sur n'importe quel environnement Node.js.
 
 ## Lancer le projet en local
 
-Installez Node.js 22 et pnpm, puis configurez les variables d’environnement d’authentification et de base de données fournies par l’hébergeur. Lancez ensuite :
+Prérequis : **Node.js 22+**, **pnpm**, et une base **PostgreSQL 15+** (locale ou
+projet Supabase).
+
+**1. Configurer l'environnement**
+
+Copiez `.env.example` vers `.env` et renseignez au minimum `DATABASE_URL`.
+
+**2. Installer, migrer, alimenter**
 
 ```bash
 pnpm install
-pnpm dev
-```
-
-La vérification complète s’exécute avec :
-
-```bash
-pnpm check
-pnpm test
-pnpm build
-```
-
-Le jeu de démonstration est idempotent :
-
-```bash
+pnpm drizzle-kit migrate
 pnpm tsx scripts/seed.ts
-```
-
-Le test d’intégration CRUD crée, vérifie puis supprime ses propres données temporaires :
-
-```bash
-pnpm tsx scripts/smoke-crud.ts
-pnpm tsx scripts/smoke-customer-success.ts
-pnpm tsx scripts/smoke-support.ts
-pnpm tsx scripts/smoke-analytics.ts
-pnpm tsx scripts/smoke-analytics-pdf.ts
-pnpm tsx scripts/smoke-marketing.ts
-```
-
-Le jeu de démonstration du deuxième pôle se charge séparément et peut être rejoué sans dupliquer les abonnements :
-
-```bash
 pnpm tsx scripts/seed-customer-success.ts
 pnpm tsx scripts/seed-support.ts
 pnpm tsx scripts/seed-analytics.ts
 pnpm tsx scripts/seed-marketing.ts
 ```
+
+**3. Démarrer**
+
+```bash
+pnpm dev
+```
+
+L'application écoute sur `http://localhost:3000` (port suivant disponible si
+3000 est occupé).
+
+## Raccordement à Supabase
+
+1. Créer le projet Supabase **dans une région européenne** — l'activité relève
+   du secteur de la santé et les données doivent rester dans l'Union européenne.
+2. Renseigner `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` dans `.env`.
+3. Appliquer le schéma : `pnpm drizzle-kit migrate`.
+4. Exécuter `supabase/setup.sql` dans l'éditeur SQL du projet. Ce script active
+   RLS sur les 37 tables et planifie les traitements quotidiens.
+5. Créer le compartiment de stockage **privé** nommé `documents`
+   (Storage → New bucket, *Public bucket* décoché).
+6. Inviter les membres de l'équipe depuis Authentication → Users.
+
+### Authentification
+
+La connexion se fait par **lien magique** : l'utilisateur saisit son adresse
+professionnelle et reçoit un lien à usage unique. Aucun mot de passe n'est
+stocké par l'application. Seules les adresses enregistrées dans le projet
+Supabase peuvent se connecter. L'adresse indiquée dans `OWNER_EMAIL` reçoit
+automatiquement le rôle administrateur.
+
+Pour travailler sans réseau, `DEV_AUTH_ENABLED=true` ouvre une session locale en
+rôle administrateur. Cette bascule est sans effet dès que `NODE_ENV` vaut
+`production`.
+
+### Accès direct aux données
+
+La clé `anon` est publique par conception. L'accès direct aux tables via l'API
+REST de Supabase est donc **entièrement bloqué par RLS** : l'application est le
+seul chemin d'accès aux données, et les droits par rôle sont appliqués dans les
+routeurs tRPC. Voir `supabase/setup.sql`.
+
+### Documents
+
+Les contrats et supports marketing sont déposés dans un compartiment privé. La
+base ne conserve que la clé du fichier : le lien de téléchargement est signé à
+chaque affichage et expire au bout d'une heure. Sans configuration Supabase, les
+fichiers sont écrits dans `.local-storage/` pour le développement.
 
 ## Conventions des indicateurs Direction
 
@@ -100,36 +136,48 @@ pnpm tsx scripts/seed-marketing.ts
 Les écrans affichent explicitement la période d’analyse et la date d’arrêté. Le CAC et la LTV restent des estimations de pilotage tant que les coûts complets d’acquisition et la marge brute comptable ne sont pas synchronisés.
 ## Alertes et traitements automatiques
 
-Deux mécanismes complémentaires sont disponibles pour Succès Client et Support. Le bouton **Recalculer** de chaque dashboard exécute immédiatement son moteur dans la requête utilisateur. Après publication, l’option **Automatisation quotidienne** crée un traitement géré : Succès Client s’exécute à 06:00 UTC via `/api/scheduled/customer-success-alerts`, puis Support à 06:30 UTC via `/api/scheduled/support-alerts`. Les traitements sont authentifiés, idempotents et liés à leur identifiant de tâche.
+Deux mécanismes complémentaires couvrent Succès Client et Support.
 
-| Approche | Compromis | Coût | Complexité de mise en place |
-|---|---|---|---|
-| Recalcul à la demande | Immédiat et transparent, mais dépend d’une action humaine | Inclus dans l’application | Aucune |
-| Traitement quotidien géré | Fonctionne sans navigateur ouvert et maintient les alertes à jour | Exécution légère selon l’usage d’hébergement | Activation en un clic après publication |
+Le bouton **Recalculer** de chaque tableau de bord exécute immédiatement le
+moteur d'alertes dans la requête utilisateur.
 
-Le bouton **Relancer** d’une facture enregistre la relance, incrémente son compteur et programme la prochaine à J+7. L’envoi effectif d’un email sera branché lors de l’intégration Mailjet ; aucune communication externe n’est envoyée dans ce lot.
+L'interrupteur **Automatisation quotidienne** active le traitement planifié :
+Succès Client à 06:00 UTC via `/api/scheduled/customer-success-alerts`, Support à
+06:30 UTC via `/api/scheduled/support-alerts`. La planification est portée par
+`pg_cron` côté Supabase (voir `supabase/setup.sql`) ; l'interrupteur de
+l'interface décide si le calcul est réellement effectué à chaque déclenchement.
+
+Ces endpoints sont protégés par le secret partagé `CRON_SECRET`, comparé à durée
+constante. Un appel sans secret valide reçoit une réponse 403. Les traitements
+sont idempotents : les rejouer ne crée pas de doublon d'alerte.
+
+Le bouton **Relancer** d'une facture enregistre la relance, incrémente son
+compteur et programme la prochaine à J+7. L'envoi effectif d'un email sera
+branché lors de l'intégration Mailjet ; aucune communication externe n'est
+émise dans cette version.
 
 ## Documents contractuels
 
-Les fichiers associés aux contrats sont envoyés dans le stockage objet intégré et seule leur référence est conservée en base. Les formats PDF, Word et image sont acceptés par l’interface, avec une limite de 10 Mo par document.
-
-Les supports Marketing suivent la même règle : le fichier est stocké dans l’espace objet sécurisé, tandis que son titre, son type, sa campagne et sa référence sont conservés en base. La limite est également de 10 Mo.
+Les fichiers associés aux contrats et les supports Marketing sont déposés dans le
+compartiment privé Supabase, avec une limite de 10 Mo par document (PDF, Word,
+image). La base ne conserve que la clé du fichier et ses métadonnées : le lien de
+téléchargement est signé à l'affichage et expire au bout d'une heure.
 
 ## Capture des leads Marketing
 
 Le formulaire public de `medactio.fr` peut transmettre une demande en `POST` vers `/api/public/marketing/leads`. L’endpoint limite les origines autorisées aux domaines Medactio, exige un consentement explicite, valide toutes les données, utilise un champ honeypot contre les robots et déduplique l’e-mail au sein d’une campagne. Une organisation et un contact en statut prospect sont créés dans le CRM si nécessaire. Aucun email ni publication externe n’est envoyé automatiquement dans cette version.
 
-## Variables et intégrations à préparer
+## Intégrations restant à brancher
 
-| Intégration | Utilité | État de cette livraison |
+| Intégration | Utilité | État |
 |---|---|---|
-| Supabase | Base PostgreSQL, Auth et RLS cibles | Migration prête ; raccordement au projet de production à effectuer |
-| Yousign ou DocuSign | Envoi et signature électronique des devis | Champs et cycle de statut prêts ; clé API non requise pour ce lot |
-| Mailjet | Emails transactionnels, newsletters et relances | Préparation et suivi internes opérationnels ; envoi externe à brancher |
-| Réseaux sociaux | Publication des contenus planifiés | Calendrier, briefs et statuts prêts ; publication externe non activée |
-| Stripe | Paiement et facturation récurrente | Abonnements gérés dans l’application ; synchronisation Stripe non branchée |
+| Mailjet | Emails transactionnels, newsletters et relances | Suivi interne opérationnel ; envoi externe à brancher |
+| Stripe | Paiement et facturation récurrente | Abonnements gérés dans l'application ; synchronisation à brancher |
+| Yousign ou DocuSign | Signature électronique des devis | Cycle de statut prêt ; API non branchée |
+| Réseaux sociaux | Publication des contenus planifiés | Calendrier prêt ; publication non activée |
 
-Aucun secret ne doit être commité. Les environnements développement, staging et production doivent conserver des variables séparées.
+Aucun secret ne doit être commité. Les environnements développement, staging et
+production doivent conserver des variables séparées.
 
 ## Données et conformité
 
@@ -137,4 +185,7 @@ Cette plateforme est un outil de pilotage interne et ne doit pas recevoir de don
 
 ## Prochaine étape recommandée
 
-Les cinq pôles prioritaires du MVP V1 sont désormais opérationnels. Après adoption du MVP, le prochain lot recommandé est le **pôle Finance & Comptabilité V2** : trésorerie, dépenses, transactions bancaires, rapprochement et export comptable.
+Les cinq pôles prioritaires du MVP V1 sont opérationnels et l'application est
+désormais autonome. Le prochain lot est le **pôle Finance & Comptabilité V2** :
+trésorerie, dépenses, transactions bancaires, rapprochement et export comptable
+au format FEC. Les tables correspondantes existent déjà dans le schéma.
