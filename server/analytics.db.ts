@@ -1,11 +1,11 @@
 import { asc, eq } from "drizzle-orm";
-import { deals, internalUsers, invoices, marketingCampaigns, organizations, subscriptions, supportTickets, usageLogs } from "../drizzle/schema";
+import { deals, internalUsers, invoices, marketingCampaigns, marketingLeads, organizations, subscriptions, supportTickets, usageLogs } from "../drizzle/schema";
 import { requireDb } from "./db";
 import { AnalyticsPeriod, analyticsCsv, calculateAnalytics } from "./analytics.logic";
 
 export async function getAnalytics(period: AnalyticsPeriod = "12m") {
   const db = await requireDb();
-  const [subscriptionRows, organizationRows, usageRows, dealRows, campaignRows, ticketRows, invoiceRows] = await Promise.all([
+  const [subscriptionRows, organizationRows, usageRows, dealRows, campaignRows, ticketRows, invoiceRows, marketingLeadRows] = await Promise.all([
     db.select().from(subscriptions),
     db.select().from(organizations),
     db.select().from(usageLogs).orderBy(asc(usageLogs.logDate)),
@@ -21,6 +21,7 @@ export async function getAnalytics(period: AnalyticsPeriod = "12m") {
     db.select({
       id: marketingCampaigns.id,
       budget: marketingCampaigns.budget,
+      attributedRevenue: marketingCampaigns.attributedRevenue,
       leadsGenerated: marketingCampaigns.leadsGenerated,
       status: marketingCampaigns.status,
       startDate: marketingCampaigns.startDate,
@@ -36,8 +37,10 @@ export async function getAnalytics(period: AnalyticsPeriod = "12m") {
       ownerName: internalUsers.fullName,
     }).from(supportTickets).leftJoin(internalUsers, eq(supportTickets.assignedTo, internalUsers.id)),
     db.select().from(invoices),
+    db.select({ campaignId: marketingLeads.campaignId }).from(marketingLeads),
   ]);
-  return calculateAnalytics({ subscriptions: subscriptionRows, organizations: organizationRows, usage: usageRows, deals: dealRows, campaigns: campaignRows, tickets: ticketRows, invoices: invoiceRows, period });
+  const campaignsWithCapturedLeads = campaignRows.map(campaign => ({ ...campaign, leadsGenerated: marketingLeadRows.filter(lead => lead.campaignId === campaign.id).length }));
+  return calculateAnalytics({ subscriptions: subscriptionRows, organizations: organizationRows, usage: usageRows, deals: dealRows, campaigns: campaignsWithCapturedLeads, tickets: ticketRows, invoices: invoiceRows, period });
 }
 
 export async function exportAnalyticsCsv(period: AnalyticsPeriod) {

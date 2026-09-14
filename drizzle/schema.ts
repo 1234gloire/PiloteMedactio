@@ -129,7 +129,10 @@ export const marketingCampaigns = mysqlTable("marketing_campaigns", {
     "Publicite Payante",
     "Autre",
   ]).notNull(),
+  objective: text("objective"),
   budget: decimal("budget", { precision: 12, scale: 2 }).default("0").notNull(),
+  targetLeads: int("targetLeads").default(0).notNull(),
+  attributedRevenue: decimal("attributedRevenue", { precision: 12, scale: 2 }).default("0").notNull(),
   startDate: date("startDate", { mode: "string" }),
   endDate: date("endDate", { mode: "string" }),
   status: mysqlEnum("status", ["Planifiee", "En Cours", "Terminee"])
@@ -153,12 +156,17 @@ export const contentCalendar = mysqlTable("content_calendar", {
     "Video",
     "Autre",
   ]).notNull(),
+  brief: text("brief"),
+  targetAudience: varchar("targetAudience", { length: 240 }),
+  draftContent: text("draftContent"),
   publishDate: date("publishDate", { mode: "string" }),
+  publicationUrl: text("publicationUrl"),
   status: mysqlEnum("status", ["Idee", "En Redaction", "Planifie", "Publie"])
     .default("Idee")
     .notNull(),
   assignedTo: int("assignedTo").references(() => internalUsers.id, { onDelete: "set null" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const deals = mysqlTable(
@@ -192,6 +200,90 @@ export const deals = mysqlTable(
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
   table => [index("deals_stage_idx").on(table.stage), index("deals_organization_idx").on(table.organizationId)]
+);
+
+export const marketingLeads = mysqlTable(
+  "marketing_leads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    campaignId: int("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
+    organizationId: int("organizationId").references(() => organizations.id, { onDelete: "set null" }),
+    contactId: int("contactId").references(() => contacts.id, { onDelete: "set null" }),
+    dealId: int("dealId").references(() => deals.id, { onDelete: "set null" }),
+    fullName: varchar("fullName", { length: 200 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 40 }),
+    jobTitle: varchar("jobTitle", { length: 200 }),
+    organizationName: varchar("organizationName", { length: 240 }).notNull(),
+    organizationType: mysqlEnum("organizationType", [
+      "Hopital Public",
+      "Clinique Privee",
+      "Groupement Hospitalier",
+      "Cabinet Liberal",
+    ]).default("Cabinet Liberal").notNull(),
+    status: mysqlEnum("status", ["Nouveau", "Qualifie", "RDV Planifie", "Converti", "Rejete"])
+      .default("Nouveau")
+      .notNull(),
+    source: mysqlEnum("source", ["Site Web", "Import", "Evenement", "Manuel"]).default("Site Web").notNull(),
+    utmSource: varchar("utmSource", { length: 160 }),
+    utmMedium: varchar("utmMedium", { length: 160 }),
+    utmCampaign: varchar("utmCampaign", { length: 240 }),
+    consentToContact: boolean("consentToContact").default(false).notNull(),
+    notes: text("notes"),
+    qualifiedAt: timestamp("qualifiedAt"),
+    convertedAt: timestamp("convertedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("marketing_leads_campaign_idx").on(table.campaignId),
+    index("marketing_leads_status_idx").on(table.status),
+    index("marketing_leads_email_idx").on(table.email),
+  ]
+);
+
+export const marketingEvents = mysqlTable(
+  "marketing_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    campaignId: int("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 240 }).notNull(),
+    eventType: mysqlEnum("eventType", ["Webinaire", "Demo Collective", "Salon", "Atelier"])
+      .default("Webinaire")
+      .notNull(),
+    scheduledAt: timestamp("scheduledAt").notNull(),
+    registrationCount: int("registrationCount").default(0).notNull(),
+    attendeeCount: int("attendeeCount").default(0).notNull(),
+    meetingsBooked: int("meetingsBooked").default(0).notNull(),
+    status: mysqlEnum("status", ["Planifie", "Termine", "Annule"]).default("Planifie").notNull(),
+    meetingUrl: text("meetingUrl"),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("marketing_events_campaign_idx").on(table.campaignId), index("marketing_events_date_idx").on(table.scheduledAt)]
+);
+
+export const marketingAssets = mysqlTable(
+  "marketing_assets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    campaignId: int("campaignId").references(() => marketingCampaigns.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 240 }).notNull(),
+    assetType: mysqlEnum("assetType", ["Plaquette", "Argumentaire", "Etude de Cas", "Presentation", "Visuel", "Autre"])
+      .default("Autre")
+      .notNull(),
+    description: text("description"),
+    storageKey: text("storageKey").notNull(),
+    fileUrl: text("fileUrl").notNull(),
+    fileName: varchar("fileName", { length: 240 }).notNull(),
+    mimeType: varchar("mimeType", { length: 160 }).notNull(),
+    sizeBytes: int("sizeBytes").default(0).notNull(),
+    createdBy: int("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("marketing_assets_campaign_idx").on(table.campaignId), index("marketing_assets_type_idx").on(table.assetType)]
 );
 
 export const interactions = mysqlTable(
@@ -656,6 +748,11 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Organization = typeof organizations.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
+export type MarketingCampaign = typeof marketingCampaigns.$inferSelect;
+export type ContentCalendarItem = typeof contentCalendar.$inferSelect;
+export type MarketingLead = typeof marketingLeads.$inferSelect;
+export type MarketingEvent = typeof marketingEvents.$inferSelect;
+export type MarketingAsset = typeof marketingAssets.$inferSelect;
 export type Deal = typeof deals.$inferSelect;
 export type Interaction = typeof interactions.$inferSelect;
 export type Quote = typeof quotes.$inferSelect;

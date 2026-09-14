@@ -64,6 +64,25 @@ export const labels: Record<string, string> = {
   "Facture Impayee": "Facture impayée",
   "Contrat A Renouveler": "Contrat à renouveler",
   "Rendez-vous Proche": "Rendez-vous proche",
+  Planifiee: "Planifiée",
+  Terminee: "Terminée",
+  "Reseaux Sociaux": "Réseaux sociaux",
+  "Publicite Payante": "Publicité payante",
+  "Post Reseau Social": "Post réseau social",
+  Video: "Vidéo",
+  Idee: "Idée",
+  "En Redaction": "En rédaction",
+  Planifie: "Planifié",
+  Publie: "Publié",
+  Qualifie: "Qualifié",
+  "RDV Planifie": "RDV planifié",
+  Converti: "Converti",
+  Rejete: "Rejeté",
+  Evenement: "Événement",
+  "Demo Collective": "Démo collective",
+  Annule: "Annulé",
+  "Etude de Cas": "Étude de cas",
+  Presentation: "Présentation",
 };
 
 export const labelFor = (value?: string | null) => (value ? labels[value] || value : "—");
@@ -125,6 +144,17 @@ const toneMap: Record<string, string> = {
   Payee: "bg-emerald-50 text-emerald-700 border-emerald-200",
   "En Retard": "bg-rose-50 text-rose-700 border-rose-200",
   "A Signer": "bg-amber-50 text-amber-700 border-amber-200",
+  Planifiee: "bg-sky-50 text-sky-700 border-sky-200",
+  Terminee: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Idee: "bg-slate-100 text-slate-700 border-slate-200",
+  "En Redaction": "bg-violet-50 text-violet-700 border-violet-200",
+  Planifie: "bg-sky-50 text-sky-700 border-sky-200",
+  Publie: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Qualifie: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "RDV Planifie": "bg-amber-50 text-amber-700 border-amber-200",
+  Converti: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Rejete: "bg-rose-50 text-rose-700 border-rose-200",
+  Annule: "bg-slate-100 text-slate-500 border-slate-200",
 };
 
 export function StatusBadge({ value, className }: { value?: string | null; className?: string }) {
@@ -211,3 +241,4 @@ export const canWriteCustomerSuccess = (role?: string | null) => role === "admin
 export const canWriteSubscriptions = (role?: string | null) => role === "admin" || role === "finance";
 export const canWriteSupport = (role?: string | null) => role === "admin" || role === "secretariat";
 export const canWriteInvoices = (role?: string | null) => role === "admin" || role === "secretariat" || role === "finance";
+export const canWriteMarketing = (role?: string | null) => role === "admin" || role === "marketing";

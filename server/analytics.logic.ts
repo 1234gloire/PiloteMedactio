@@ -8,7 +8,7 @@ export type AnalyticsInput = {
   organizations: Array<{ id: number; status: string; healthScore: string; createdAt: Date }>;
   usage: Array<{ documentsGeneratedCount: number; aiRequestsCount: number; logDate: string }>;
   deals: Array<{ id: number; organizationId: number; amount: string | number; stage: string; createdAt: Date; closedAt: Date | null; ownerName: string | null }>;
-  campaigns: Array<{ id: number; budget: string | number; leadsGenerated: number; status: string; startDate: string | null; ownerName: string | null }>;
+  campaigns: Array<{ id: number; budget: string | number; attributedRevenue?: string | number; leadsGenerated: number; status: string; startDate: string | null; ownerName: string | null }>;
   tickets: Array<{ id: number; status: string; priority: string; createdAt: Date; slaDueAt: Date | null; resolvedAt: Date | null; ownerName: string | null }>;
   invoices: Array<{ amount: string | number; status: string; issuedAt: string | null; dueDate: string | null; paidAt: string | null }>;
   now?: Date;
@@ -55,6 +55,7 @@ export function calculateAnalytics(input: AnalyticsInput) {
 
   const campaignsInPeriod = input.campaigns.filter(item => !item.startDate || asDate(item.startDate)! >= start);
   const marketingSpend = campaignsInPeriod.reduce((sum, item) => sum + Number(item.budget), 0);
+  const marketingRevenue = campaignsInPeriod.reduce((sum, item) => sum + Number(item.attributedRevenue || 0), 0);
   const wonDealsInPeriod = input.deals.filter(item => item.stage === "Gagne" && item.closedAt && item.closedAt >= start);
   const newCustomerIds = new Set(wonDealsInPeriod.map(item => item.organizationId));
   const cac = newCustomerIds.size ? marketingSpend / newCustomerIds.size : null;
@@ -138,7 +139,7 @@ export function calculateAnalytics(input: AnalyticsInput) {
     commercial: { totalPipeline: round(totalPipeline), weightedPipeline: round(weightedPipeline), wonRevenue: round(wonRevenue), conversionRate: round(conversionRate, 1), activeDeals: openDeals.length },
     cash: { expectedCollections: round(expectedCollections), overdueAmount: round(overdueAmount), collectedRevenue: round(collectedRevenue), outstandingInvoices: outstandingInvoices.length, overdueInvoices: overdueInvoices.length },
     support: { ticketsCreated: ticketsInPeriod.length, ticketsResolved: resolvedTickets.length, openTickets: openTickets.length, slaBreaches, averageResolutionHours: round(averageResolutionHours, 1), resolutionRate: ticketsInPeriod.length ? round(resolvedTickets.length / ticketsInPeriod.length * 100, 1) : 0 },
-    marketing: { spend: round(marketingSpend), campaigns: campaignsInPeriod.length, activeCampaigns, leadsGenerated, costPerLead: leadsGenerated ? round(marketingSpend / leadsGenerated) : null },
+    marketing: { spend: round(marketingSpend), attributedRevenue: round(marketingRevenue), campaigns: campaignsInPeriod.length, activeCampaigns, leadsGenerated, costPerLead: leadsGenerated ? round(marketingSpend / leadsGenerated) : null, roi: marketingSpend ? round((marketingRevenue - marketingSpend) / marketingSpend * 100, 1) : null },
     performance: { commercial: commercialPerformance, support: supportPerformance, marketing: marketingPerformance },
     monthly: months,
   };
@@ -163,7 +164,7 @@ export function analyticsCsv(data: ReturnType<typeof calculateAnalytics>) {
     ["Pipeline total", data.commercial.totalPipeline, "EUR"], ["Pipeline pondéré", data.commercial.weightedPipeline, "EUR"], ["CA gagné", data.commercial.wonRevenue, "EUR"],
     ["Encaissements attendus", data.cash.expectedCollections, "EUR"], ["Montant en retard", data.cash.overdueAmount, "EUR"], ["Encaissements période", data.cash.collectedRevenue, "EUR"],
     ["Tickets ouverts", data.support.openTickets, "tickets"], ["SLA dépassés", data.support.slaBreaches, "tickets"], ["Temps moyen de résolution", data.support.averageResolutionHours, "heures"],
-    ["Budget marketing", data.marketing.spend, "EUR"], ["Leads générés", data.marketing.leadsGenerated, "leads"],
+    ["Budget marketing", data.marketing.spend, "EUR"], ["Revenu attribué au marketing", data.marketing.attributedRevenue, "EUR"], ["ROI marketing", data.marketing.roi, "%"], ["Leads générés", data.marketing.leadsGenerated, "leads"],
     [], ["HISTORIQUE 12 MOIS", "MRR", "Écrits", "Requêtes IA", "CA gagné", "Encaissé"],
     ...data.monthly.map(month => [month.label, month.mrr, month.documents, month.aiRequests, month.wonRevenue, month.collected]),
   ];

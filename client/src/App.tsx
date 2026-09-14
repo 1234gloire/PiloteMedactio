@@ -25,6 +25,12 @@ import SupportTickets from "./pages/SupportTickets";
 import DirectionDashboard from "./pages/DirectionDashboard";
 import DirectionExports from "./pages/DirectionExports";
 import DirectionReport from "./pages/DirectionReport";
+import MarketingDashboard from "./pages/MarketingDashboard";
+import MarketingCampaigns from "./pages/MarketingCampaigns";
+import MarketingCampaignDetail from "./pages/MarketingCampaignDetail";
+import MarketingCalendar from "./pages/MarketingCalendar";
+import MarketingLeads from "./pages/MarketingLeads";
+import MarketingLibrary from "./pages/MarketingLibrary";
 
 function Router() {
   return <DashboardLayout><Switch>
@@ -45,6 +51,12 @@ function Router() {
     <Route path="/support/factures" component={Invoices} />
     <Route path="/support/contrats" component={Contracts} />
     <Route path="/support/agenda" component={SupportCalendar} />
+    <Route path="/marketing" component={MarketingDashboard} />
+    <Route path="/marketing/campagnes" component={MarketingCampaigns} />
+    <Route path="/marketing/campagnes/:id">{params => <MarketingCampaignDetail id={Number(params.id)} />}</Route>
+    <Route path="/marketing/calendrier" component={MarketingCalendar} />
+    <Route path="/marketing/leads" component={MarketingLeads} />
+    <Route path="/marketing/bibliotheque" component={MarketingLibrary} />
     <Route path="/direction" component={DirectionDashboard} />
     <Route path="/direction/commercial"><DirectionReport pole="commercial" /></Route>
     <Route path="/direction/clients"><DirectionReport pole="clients" /></Route>

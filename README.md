@@ -1,6 +1,6 @@
 # Medactio Pilotage — MVP V1
 
-Cette version du MVP fournit quatre pôles opérationnels : le **CRM Commercial & B2B**, la **Gestion des Clients & Licences**, le **pôle Secrétariat & Support** et le **pôle Direction & Analytics**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
+Cette version du MVP fournit cinq pôles opérationnels : le **CRM Commercial & B2B**, le **pôle Marketing & Contenu**, la **Gestion des Clients & Licences**, le **pôle Secrétariat & Support** et le **pôle Direction & Analytics**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
 
 ## Fonctionnalités livrées
 
@@ -13,6 +13,12 @@ Cette version du MVP fournit quatre pôles opérationnels : le **CRM Commercial 
 | Fiche opportunité | Étape, montant, échéance, journal chronologique, contacts, devis et relances |
 | Devis | Création d’un brouillon, numéro automatique, date de validité et suivi des statuts jusqu’à la signature |
 | Relances | Programmation, suivi et clôture des relances commerciales |
+| Dashboard Marketing | Leads capturés, CPL, conversion, ROI, performance par canal, cadence éditoriale et rendement des événements |
+| Campagnes Marketing | Canaux, budget, objectif, dates, responsable, cible de leads, revenu attribué et fiche consolidée |
+| Leads Marketing | Capture du site ou saisie interne, consentement, déduplication, qualification et création d’une opportunité CRM |
+| Webinaires & démonstrations | Inscrits, présents, rendez-vous générés, statut et rattachement aux campagnes |
+| Calendrier éditorial | Articles, posts, newsletters et vidéos avec brief, audience, brouillon, responsable et statut de publication |
+| Bibliothèque Marketing | Plaquettes, argumentaires, études de cas, présentations et visuels stockés hors base |
 | Tableau de bord Succès Client | Clients actifs, MRR/ARR estimés, adoption des sièges, volume d’écrits, comptes à risque, churn et renouvellements à venir |
 | Onboarding client | Checklist par établissement : compte créé, formation effectuée et premiers écrits générés |
 | Licences praticiens | Sièges souscrits versus actifs, activation et désactivation des accès par praticien |
@@ -67,6 +73,7 @@ pnpm tsx scripts/smoke-customer-success.ts
 pnpm tsx scripts/smoke-support.ts
 pnpm tsx scripts/smoke-analytics.ts
 pnpm tsx scripts/smoke-analytics-pdf.ts
+pnpm tsx scripts/smoke-marketing.ts
 ```
 
 Le jeu de démonstration du deuxième pôle se charge séparément et peut être rejoué sans dupliquer les abonnements :
@@ -75,6 +82,8 @@ Le jeu de démonstration du deuxième pôle se charge séparément et peut être
 pnpm tsx scripts/seed-customer-success.ts
 pnpm tsx scripts/seed-support.ts
 pnpm tsx scripts/seed-analytics.ts
+pnpm tsx scripts/seed-marketing.ts
+```
 
 ## Conventions des indicateurs Direction
 
@@ -89,8 +98,6 @@ pnpm tsx scripts/seed-analytics.ts
 | Encaissements attendus | Factures envoyées ou en retard non encore réglées |
 
 Les écrans affichent explicitement la période d’analyse et la date d’arrêté. Le CAC et la LTV restent des estimations de pilotage tant que les coûts complets d’acquisition et la marge brute comptable ne sont pas synchronisés.
-```
-
 ## Alertes et traitements automatiques
 
 Deux mécanismes complémentaires sont disponibles pour Succès Client et Support. Le bouton **Recalculer** de chaque dashboard exécute immédiatement son moteur dans la requête utilisateur. Après publication, l’option **Automatisation quotidienne** crée un traitement géré : Succès Client s’exécute à 06:00 UTC via `/api/scheduled/customer-success-alerts`, puis Support à 06:30 UTC via `/api/scheduled/support-alerts`. Les traitements sont authentifiés, idempotents et liés à leur identifiant de tâche.
@@ -106,13 +113,20 @@ Le bouton **Relancer** d’une facture enregistre la relance, incrémente son co
 
 Les fichiers associés aux contrats sont envoyés dans le stockage objet intégré et seule leur référence est conservée en base. Les formats PDF, Word et image sont acceptés par l’interface, avec une limite de 10 Mo par document.
 
+Les supports Marketing suivent la même règle : le fichier est stocké dans l’espace objet sécurisé, tandis que son titre, son type, sa campagne et sa référence sont conservés en base. La limite est également de 10 Mo.
+
+## Capture des leads Marketing
+
+Le formulaire public de `medactio.fr` peut transmettre une demande en `POST` vers `/api/public/marketing/leads`. L’endpoint limite les origines autorisées aux domaines Medactio, exige un consentement explicite, valide toutes les données, utilise un champ honeypot contre les robots et déduplique l’e-mail au sein d’une campagne. Une organisation et un contact en statut prospect sont créés dans le CRM si nécessaire. Aucun email ni publication externe n’est envoyé automatiquement dans cette version.
+
 ## Variables et intégrations à préparer
 
 | Intégration | Utilité | État de cette livraison |
 |---|---|---|
 | Supabase | Base PostgreSQL, Auth et RLS cibles | Migration prête ; raccordement au projet de production à effectuer |
 | Yousign ou DocuSign | Envoi et signature électronique des devis | Champs et cycle de statut prêts ; clé API non requise pour ce lot |
-| Mailjet | Emails transactionnels et relances | Relances internes opérationnelles ; envoi externe à brancher |
+| Mailjet | Emails transactionnels, newsletters et relances | Préparation et suivi internes opérationnels ; envoi externe à brancher |
+| Réseaux sociaux | Publication des contenus planifiés | Calendrier, briefs et statuts prêts ; publication externe non activée |
 | Stripe | Paiement et facturation récurrente | Abonnements gérés dans l’application ; synchronisation Stripe non branchée |
 
 Aucun secret ne doit être commité. Les environnements développement, staging et production doivent conserver des variables séparées.
@@ -123,4 +137,4 @@ Cette plateforme est un outil de pilotage interne et ne doit pas recevoir de don
 
 ## Prochaine étape recommandée
 
-Après validation de ces quatre pôles, le prochain lot du MVP est le **pôle Marketing & Contenu** afin de transformer les campagnes déjà mesurées dans Analytics en workflows opérationnels complets.
+Les cinq pôles prioritaires du MVP V1 sont désormais opérationnels. Après adoption du MVP, le prochain lot recommandé est le **pôle Finance & Comptabilité V2** : trésorerie, dépenses, transactions bancaires, rapprochement et export comptable.

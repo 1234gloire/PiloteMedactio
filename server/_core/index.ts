@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { runCustomerSuccessAlerts } from "../customer-success.scheduler";
 import { runSupportAlerts } from "../support.scheduler";
+import { applyLeadCaptureCors, captureMarketingLead } from "../marketing.capture";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -40,6 +41,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   app.post("/api/scheduled/customer-success-alerts", runCustomerSuccessAlerts);
   app.post("/api/scheduled/support-alerts", runSupportAlerts);
+  app.options("/api/public/marketing/leads", (req, res) => { applyLeadCaptureCors(req, res); res.sendStatus(204); });
+  app.post("/api/public/marketing/leads", captureMarketingLead);
   // tRPC API
   app.use(
     "/api/trpc",
