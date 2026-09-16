@@ -478,6 +478,11 @@ export const supportTickets = pgTable("support_tickets", {
     "Onboarding",
     "Autre",
   ] }).notNull(),
+  // Origine de la demande. Un ticket ouvert depuis le produit par un client
+  // ne doit jamais être confondu avec une demande interne de l'équipe.
+  source: varchar("source", { length: 32, enum: ["Interne", "Produit Medactio"] })
+    .default("Interne")
+    .notNull(),
   priority: varchar("priority", { length: 32, enum: ["Basse", "Moyenne", "Haute", "Urgente"] })
     .default("Moyenne")
     .notNull(),

@@ -68,6 +68,7 @@ export async function listTickets(input?: { search?: string; status?: string; pr
     title: supportTickets.title,
     description: supportTickets.description,
     category: supportTickets.category,
+    source: supportTickets.source,
     priority: supportTickets.priority,
     status: supportTickets.status,
     assignedTo: supportTickets.assignedTo,

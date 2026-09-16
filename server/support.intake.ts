@@ -98,6 +98,7 @@ export async function openSupportTicket(req: Request, res: Response) {
       title: input.title,
       description: `${input.description ?? ""}${formatContext(input.context)}${identity}`.trim() || null,
       category: input.category,
+      source: "Produit Medactio",
       // La priorité reste un arbitrage interne : elle n'est pas laissée au
       // demandeur, sans quoi toute demande arriverait en urgence.
       priority: "Moyenne",

@@ -251,3 +251,9 @@ export const canWriteSubscriptions = (role?: string | null) => role === "admin" 
 export const canWriteSupport = (role?: string | null) => role === "admin" || role === "secretariat";
 export const canWriteInvoices = (role?: string | null) => role === "admin" || role === "secretariat" || role === "finance";
 export const canWriteMarketing = (role?: string | null) => role === "admin" || role === "marketing";
+
+/** Origine lisible d'un ticket, sans jamais confondre client et équipe. */
+export function ticketOrigin(ticket: { organizationName?: string | null; source?: string | null }) {
+  if (ticket.organizationName) return ticket.organizationName;
+  return ticket.source === "Produit Medactio" ? "Demandeur non identifié" : "Demande interne";
+}
