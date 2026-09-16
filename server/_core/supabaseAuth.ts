@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import WebSocket from "ws";
 import type { Request } from "express";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -24,6 +25,12 @@ export function getSupabaseAdmin(): SupabaseClient | null {
   if (!_client) {
     _client = createClient(url, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
+      // Le client Supabase initialise son module temps réel dès sa
+      // construction, ce qui exige un WebSocket global — absent avant
+      // Node 22. L'application n'utilise pas le temps réel, mais il faut
+      // fournir une implémentation pour que la construction aboutisse sur
+      // les environnements en Node 20.
+      realtime: { transport: WebSocket as unknown as never },
     });
   }
   return _client;
