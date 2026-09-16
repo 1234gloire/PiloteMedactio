@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { runCustomerSuccessAlerts } from "../customer-success.scheduler";
 import { runSupportAlerts } from "../support.scheduler";
 import { applyLeadCaptureCors, captureMarketingLead } from "../marketing.capture";
+import { openSupportTicket } from "../support.intake";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -41,6 +42,8 @@ async function startServer() {
   app.post("/api/scheduled/support-alerts", runSupportAlerts);
   app.options("/api/public/marketing/leads", (req, res) => { applyLeadCaptureCors(req, res); res.sendStatus(204); });
   app.post("/api/public/marketing/leads", captureMarketingLead);
+  // Ouverture de ticket depuis le produit Medactio (serveur à serveur).
+  app.post("/api/public/support/tickets", openSupportTicket);
   // tRPC API
   app.use(
     "/api/trpc",

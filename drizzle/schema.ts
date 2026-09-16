@@ -48,11 +48,15 @@ export const organizations = pgTable(
   {
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     name: varchar("name", { length: 240 }).notNull(),
+    // "Autre" couvre les établissements dont le type n'est pas encore qualifié,
+    // notamment les leads du formulaire public de medactio.fr, qui ne demande
+    // pas cette information. Le commercial le précise à la qualification.
     type: varchar("type", { length: 48, enum: [
       "Hopital Public",
       "Clinique Privee",
       "Groupement Hospitalier",
       "Cabinet Liberal",
+      "Autre",
     ] }).notNull(),
     address: text("address"),
     city: varchar("city", { length: 160 }),
@@ -214,12 +218,14 @@ export const marketingLeads = pgTable(
     phone: varchar("phone", { length: 40 }),
     jobTitle: varchar("jobTitle", { length: 200 }),
     organizationName: varchar("organizationName", { length: 240 }).notNull(),
+    // Aligné sur organizations.type : "Autre" tant que le type n'est pas qualifié.
     organizationType: varchar("organizationType", { length: 48, enum: [
       "Hopital Public",
       "Clinique Privee",
       "Groupement Hospitalier",
       "Cabinet Liberal",
-    ] }).default("Cabinet Liberal").notNull(),
+      "Autre",
+    ] }).default("Autre").notNull(),
     status: varchar("status", { length: 32, enum: ["Nouveau", "Qualifie", "RDV Planifie", "Converti", "Rejete"] })
       .default("Nouveau")
       .notNull(),
