@@ -31,6 +31,15 @@ import MarketingCampaignDetail from "./pages/MarketingCampaignDetail";
 import MarketingCalendar from "./pages/MarketingCalendar";
 import MarketingLeads from "./pages/MarketingLeads";
 import MarketingLibrary from "./pages/MarketingLibrary";
+import FinanceDashboard from "./pages/FinanceDashboard";
+import Expenses from "./pages/Expenses";
+import BankTransactions from "./pages/BankTransactions";
+import FinanceExports from "./pages/FinanceExports";
+import Legal from "./pages/Legal";
+import Suppliers from "./pages/Suppliers";
+import Team from "./pages/Team";
+import ProductRoadmap from "./pages/ProductRoadmap";
+import Knowledge from "./pages/Knowledge";
 
 function Router() {
   return <DashboardLayout><Switch>
@@ -57,6 +66,16 @@ function Router() {
     <Route path="/marketing/calendrier" component={MarketingCalendar} />
     <Route path="/marketing/leads" component={MarketingLeads} />
     <Route path="/marketing/bibliotheque" component={MarketingLibrary} />
+    <Route path="/finance" component={FinanceDashboard} />
+    <Route path="/finance/depenses" component={Expenses} />
+    <Route path="/finance/rapprochement" component={BankTransactions} />
+    <Route path="/finance/export" component={FinanceExports} />
+    <Route path="/juridique" component={Legal} />
+    <Route path="/fournisseurs" component={Suppliers} />
+    <Route path="/rh" component={Team} />
+    <Route path="/rh/conges" component={Team} />
+    <Route path="/produit" component={ProductRoadmap} />
+    <Route path="/base-de-connaissances" component={Knowledge} />
     <Route path="/direction" component={DirectionDashboard} />
     <Route path="/direction/commercial"><DirectionReport pole="commercial" /></Route>
     <Route path="/direction/clients"><DirectionReport pole="clients" /></Route>

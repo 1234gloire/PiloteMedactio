@@ -617,6 +617,8 @@ export const notifications = pgTable("notifications", {
     "Produit",
     "Fournisseurs",
   ] }).default("Support"),
+  // Empêche la recréation d'une même alerte à chaque recalcul.
+  dedupeKey: varchar("dedupeKey", { length: 240 }).unique(),
   message: text("message").notNull(),
   link: text("link"),
   isRead: boolean("isRead").default(false).notNull(),
@@ -677,10 +679,14 @@ export const legalDocuments = pgTable("legal_documents", {
     onDelete: "cascade",
   }),
   type: varchar("type", { length: 48, enum: ["CGU", "CGV", "DPA RGPD", "Contrat Fournisseur", "Certificat HDS", "Statuts", "Autre"] }),
+  title: varchar("title", { length: 240 }),
   version: varchar("version", { length: 60 }),
   effectiveDate: date("effectiveDate", { mode: "string" }),
   expiryDate: date("expiryDate", { mode: "string" }),
+  documentKey: text("documentKey"),
+  documentName: varchar("documentName", { length: 240 }),
   fileUrl: text("fileUrl"),
+  notes: text("notes"),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 

@@ -1,21 +1,50 @@
-# Suivi — Pôle Marketing & Contenu
+# Suivi — Phase V2 complète
 
-| Lot | État | Validation |
+Les douze pôles du cahier des charges sont livrés.
+
+| Pôle | Phase | État |
 |---|---|---|
-| Cadrage | Terminé | Campagnes, leads, contenus, événements et bibliothèque alignés sur le MVP |
-| Modèle de données | Terminé | Migration Drizzle additive et migration Supabase/RLS disponibles |
-| Backend | Terminé | API typée, CRUD, agrégations, capture publique contrôlée et stockage opérationnels |
-| Données de démonstration | Terminé | 5 campagnes, 6 leads, 6 contenus, 4 événements et 3 supports partagés |
-| Interface | Terminé | Dashboard, campagnes, fiche, calendrier, leads et bibliothèque responsive |
-| Direction | Terminé | Revenu attribué, ROI et leads réels intégrés au reporting consolidé |
-| Tests | Terminé | 35 tests automatisés et smoke test réel avec stockage réussis |
-| Validation | Terminé | TypeScript, build production, CORS/honeypot et revue desktop/mobile réussis |
-| Livraison | En cours | Checkpoint et synchronisation GitHub à finaliser |
+| Commercial & B2B | V1 | Terminé |
+| Marketing & Contenu | V1 | Terminé |
+| Clients & Licences | V1 | Terminé |
+| Secrétariat & Support | V1 | Terminé |
+| Direction & Analytics | V1 | Terminé |
+| Finance & Comptabilité | V2 | Terminé |
+| Juridique & Conformité | V2 | Terminé |
+| Fournisseurs & Partenaires | V2 | Terminé |
+| RH & Équipe interne | V2 | Terminé |
+| Roadmap Produit | V2 | Terminé |
+| Base de connaissances | V2 | Terminé |
+| Notifications & automatisations | V2 | Terminé |
 
-## Sécurité et intégrations
+## Validation du dernier lot
 
-La capture publique exige le consentement, valide les champs, déduplique les demandes et utilise un honeypot. Les origines CORS sont limitées à `medactio.fr`, `www.medactio.fr` et aux environnements locaux de développement. Le module ne publie aucun contenu et n’envoie aucune campagne à un service externe : Mailjet et les réseaux sociaux pourront être branchés dans un lot ultérieur avec les autorisations dédiées.
+| Contrôle | Résultat |
+|---|---|
+| TypeScript | sans erreur |
+| Tests automatisés | 89 tests, 16 fichiers |
+| Build de production | réussi |
+| Tests d'intégration | 7 smoke tests, dont Gouvernance |
+| Migration Supabase | additive, appliquée, RLS conservé |
 
-## Anomalies
+## Points de vigilance
 
-Aucune anomalie ouverte. La compression initiale de la sidebar desktop et l’affichage des petits fichiers à 0 Ko ont été corrigés puis recapturés. Le build conserve uniquement l’avertissement Vite non bloquant relatif à la taille du bundle principal.
+Le plan de comptes de l'export FEC doit être validé par l'expert-comptable avant
+toute transmission à l'administration fiscale.
+
+Les jours fériés ne sont pas déduits du décompte des congés : seuls les samedis
+et dimanches le sont.
+
+Le recalcul des notifications est manuel. Il pourra être planifié avec les
+traitements quotidiens existants une fois l'application déployée.
+
+## Reste à faire avant mise en production
+
+Aucun de ces points ne relève du développement fonctionnel : il s'agit du
+raccordement aux services externes.
+
+- Raccorder le formulaire de medactio.fr à l'endpoint public de capture de leads
+- Brancher Mailjet en SMTP — aucun email n'est envoyé par l'application à ce jour
+- Fermer les inscriptions publiques dans Supabase
+- Déployer, puis reprogrammer les tâches `pg_cron` avec l'URL publique
+- Brancher Stripe et la signature électronique des devis
