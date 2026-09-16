@@ -1,0 +1,38 @@
+# Service systemd de la plateforme de pilotage Medactio.
+# À installer dans /etc/systemd/system/medactio-pilotage.service
+#
+# Ce service est indépendant : il n'interfère avec aucun autre projet du VPS.
+
+[Unit]
+Description=Medactio Pilotage — plateforme interne
+Documentation=https://github.com/1234gloire/PiloteMedactio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/var/www/medactio-pilotage
+
+# Le port d'écoute est vérifié libre avant l'installation.
+Environment=NODE_ENV=production
+Environment=PORT=4100
+EnvironmentFile=/var/www/medactio-pilotage/.env
+
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+
+# L'application n'écrit que dans son propre répertoire.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=medactio-pilotage
+
+[Install]
+WantedBy=multi-user.target

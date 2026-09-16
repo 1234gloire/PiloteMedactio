@@ -271,7 +271,24 @@ téléchargement est signé à l'affichage et expire au bout d'une heure.
 
 ## Capture des leads Marketing
 
-Le formulaire public de `medactio.fr` peut transmettre une demande en `POST` vers `/api/public/marketing/leads`. L’endpoint limite les origines autorisées aux domaines Medactio, exige un consentement explicite, valide toutes les données, utilise un champ honeypot contre les robots et déduplique l’e-mail au sein d’une campagne. Une organisation et un contact en statut prospect sont créés dans le CRM si nécessaire. Aucun email ni publication externe n’est envoyé automatiquement dans cette version.
+Le formulaire « Demander une démonstration » de `medactio.fr` alimente
+directement le CRM. Le backend du site relaie la demande de serveur à serveur
+vers `POST /api/public/marketing/leads`, en présentant le secret partagé
+`LEAD_INTAKE_SECRET` : le navigateur du visiteur n'appelle jamais la plateforme
+de pilotage, et le site continue de fonctionner si celle-ci est indisponible.
+
+L'endpoint accepte le format du formulaire du site (`name`, `fonction`,
+`etablissement`, `praticiensConcernes`, `besoin`) sans remaniement, valide les
+données, déduplique par adresse email et campagne, et piège les robots par un
+champ masqué. Une organisation en statut Prospect et un contact sont créés si
+nécessaire.
+
+Un appel depuis un navigateur reste possible : les origines autorisées sont
+alors vérifiées et le consentement explicite exigé. Elles se complètent par
+`LEAD_CAPTURE_ORIGINS`.
+
+La procédure complète, avec le code à ajouter au backend de medactio.fr, figure
+dans `docs/integration-medactio-fr.md`.
 
 ## Intégrations restant à brancher
 
