@@ -1,6 +1,6 @@
-# Medactio Pilotage — MVP V1
+# Medactio Pilotage
 
-Cette version du MVP fournit cinq pôles opérationnels : le **CRM Commercial & B2B**, le **pôle Marketing & Contenu**, la **Gestion des Clients & Licences**, le **pôle Secrétariat & Support** et le **pôle Direction & Analytics**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
+Les **douze pôles** du cahier des charges sont livrés : les cinq pôles du socle V1 — **CRM Commercial & B2B**, **Marketing & Contenu**, **Clients & Licences**, **Secrétariat & Support**, **Direction & Analytics** — et les sept blocs de la phase V2 — **Finance & Comptabilité**, **Juridique & Conformité**, **Fournisseurs & Partenaires**, **RH & Équipe interne**, **Roadmap Produit**, **Base de connaissances interne** et **Notifications & automatisations centralisées**. L’interface est entièrement en français, responsive et alignée sur l’identité professionnelle et médicale de Medactio.
 
 ## Fonctionnalités livrées
 
@@ -36,6 +36,17 @@ Cette version du MVP fournit cinq pôles opérationnels : le **CRM Commercial & 
 | Reporting par pôle | Rapports Commercial, Clients & SaaS, Support et Marketing avec performances par collaborateur |
 | Usage global | Historique mensuel des écrits générés et des requêtes IA toutes organisations confondues |
 | Exports Direction | CSV compatible tableur et rapport exécutif PDF A4 généré localement |
+| Trésorerie | Solde bancaire constaté, encaissements et décaissements attendus, solde projeté à 30/60/90 jours et charges récurrentes |
+| Dépenses | Recherche, filtre par catégorie, charges ponctuelles ou récurrentes, rattachement fournisseur et CRUD complet |
+| Rapprochement bancaire | Mouvements bancaires associés à leur facture ou dépense, suggestions automatiques par montant et date, annulation possible |
+| Revenu réconcilié | MRR et ARR théoriques confrontés aux encaissements réellement constatés, avec écart et taux de couverture |
+| Export comptable | Fichier des Écritures Comptables (FEC) tabulé à 18 colonnes, journaux Ventes et Achats, contrôle d’équilibre débit/crédit |
+| Juridique & Conformité | CGU, CGV, accords RGPD, certificat HDS et statuts, avec documents stockés hors base et échéancier de conformité |
+| Fournisseurs & Partenaires | Coût annuel, contacts, renouvellements de contrat avec alerte, et historique des dépenses rattachées |
+| RH & Équipe interne | Fiches collaborateurs, demandes de congés en jours ouvrés avec validation, objectifs individuels et calendrier d’absences |
+| Roadmap Produit | Backlog en colonnes, priorisation par impact et nombre d’établissements demandeurs, lien vers le ticket d’origine, changelog |
+| Base de connaissances | Articles par catégorie, recherche plein texte exigeant tous les mots, édition réservée à l’auteur |
+| Notifications centralisées | Centre d’alertes accessible partout, compteur de non-lus, filtrage par pôle et recalcul idempotent |
 | Sécurité | Authentification, profils internes, accès financier restreint et contrôle d’écriture selon le rôle métier |
 
 ## Architecture
@@ -71,6 +82,8 @@ pnpm tsx scripts/seed-customer-success.ts
 pnpm tsx scripts/seed-support.ts
 pnpm tsx scripts/seed-analytics.ts
 pnpm tsx scripts/seed-marketing.ts
+pnpm tsx scripts/seed-finance.ts
+pnpm tsx scripts/seed-governance.ts
 ```
 
 **3. Démarrer**
@@ -120,6 +133,99 @@ Les contrats et supports marketing sont déposés dans un compartiment privé. L
 base ne conserve que la clé du fichier : le lien de téléchargement est signé à
 chaque affichage et expire au bout d'une heure. Sans configuration Supabase, les
 fichiers sont écrits dans `.local-storage/` pour le développement.
+
+## Pôle Finance & Comptabilité
+
+Ce pôle est le premier lot de la phase V2. Il couvre la trésorerie réelle de
+l'entreprise, au-delà de la facturation client déjà gérée par le Secrétariat.
+
+### Accès
+
+| Rôle | Trésorerie, dépenses, rapprochement | Écriture | Export FEC |
+|---|---|---|---|
+| `admin` | oui | oui | oui |
+| `finance` | oui | oui | oui |
+| `direction` | oui | non | oui |
+| autres rôles | non | non | non |
+
+Le pôle n'apparaît dans la navigation que pour les rôles qui y ont accès. Toute
+écriture sur les dépenses et les mouvements bancaires est journalisée dans
+`audit_log`.
+
+### Conventions de calcul
+
+| Indicateur | Convention |
+|---|---|
+| Solde en banque | Somme des crédits moins les débits **réellement constatés**. Les factures émises et non encaissées n'y figurent pas. |
+| Encaissements attendus | Factures émises ou en retard, non réglées. Une facture échue reste due et compte intégralement. |
+| Décaissements attendus | Charges récurrentes reconduites au prorata de l'horizon, plus les dépenses ponctuelles déjà datées dans la fenêtre. |
+| Solde projeté | Solde constaté + encaissements attendus − décaissements attendus. |
+| Écart de revenu | Encaissements bancaires constatés moins le MRR théorique issu des abonnements actifs. |
+
+### Rapprochement bancaire
+
+L'application propose les pièces dont le **montant est identique au centime**
+et dont la date s'écarte de moins de quinze jours, classées par proximité. Un
+encaissement est rapproché d'une facture, un décaissement d'une dépense. La
+validation reste manuelle et reste annulable : aucun rapprochement n'est
+appliqué automatiquement.
+
+### Export FEC
+
+Le Fichier des Écritures Comptables est le format tabulé à 18 colonnes exigé par
+l'administration fiscale française en cas de contrôle. Deux journaux sont
+produits, chaque pièce donnant lieu à deux lignes équilibrées :
+
+- **Ventes (VE)** — facture client : débit 411 (clients), crédit 706 (prestations de services) ;
+- **Achats (AC)** — dépense : débit du compte de charge correspondant à la catégorie, crédit 401 (fournisseurs).
+
+Les factures à l'état de brouillon sont exclues : elles ne constituent pas une
+écriture comptable. L'équilibre débit/crédit est contrôlé et affiché à chaque
+export.
+
+> **Le plan de comptes doit être validé par votre expert-comptable.** Celui
+> retenu ici est une base de travail conforme au plan comptable général, mais il
+> n'engage pas la conformité fiscale de l'export : faites-le vérifier, et
+> ajuster si nécessaire, avant toute transmission à l'administration.
+
+## Pôles de gouvernance (V2)
+
+### Accès
+
+| Pôle | Lecture | Écriture |
+|---|---|---|
+| Juridique & Conformité | `admin`, `direction` | `admin`, `direction` |
+| Fournisseurs & Partenaires | `admin`, `direction`, `finance` | `admin`, `direction` |
+| RH — fiches et validation | `admin`, `direction` | `admin`, `direction` |
+| RH — ses propres congés | chaque collaborateur | chaque collaborateur |
+| Roadmap Produit | toute l’équipe interne | `admin`, `direction` |
+| Base de connaissances | toute l’équipe interne | l’auteur, `admin`, `direction` |
+| Notifications | ses propres alertes | recalcul par `admin`, `direction` |
+
+Chaque collaborateur ne voit que ses propres demandes de congés et sa propre
+fiche : la consultation des autres membres suppose un rôle de responsable.
+
+### Conventions de calcul
+
+| Règle | Convention |
+|---|---|
+| Gravité d’une échéance | Dépassée, puis **Critique** à 30 jours ou moins, **À surveiller** à 90 jours, sinon sereine. Le seuil de 30 jours correspond au préavis courant des contrats d’hébergement et des certifications. |
+| Décompte des congés | Jours ouvrés uniquement, samedis et dimanches exclus. Les jours fériés ne sont pas déduits : ils relèvent d’un calendrier légal hors périmètre. |
+| Solde de congés | 25 jours acquis par an ; seuls les congés payés **validés** décomptent le solde. |
+| Priorisation produit | Priorité saisie, majorée pour un bug et pondérée par le nombre d’établissements distincts ayant exprimé la même demande. |
+| Recherche documentaire | Tous les mots saisis doivent être présents dans le titre ou le contenu. |
+
+### Notifications
+
+Le centre d’alertes regroupe les échéances et demandes des pôles transverses :
+document juridique ou contrat fournisseur arrivant à terme, congé à valider,
+demande produit prioritaire à arbitrer. Chaque alerte porte une clé de
+déduplication stable : **un recalcul ne crée jamais de doublon**. Les alertes
+sont adressées aux profils `admin` et `direction`, seuls habilités sur ces
+pôles, et chacun dispose de son propre exemplaire.
+
+Le recalcul est manuel, depuis l’icône de notification. Il pourra être planifié
+avec les traitements quotidiens existants une fois l’application déployée.
 
 ## Conventions des indicateurs Direction
 
@@ -185,7 +291,15 @@ Cette plateforme est un outil de pilotage interne et ne doit pas recevoir de don
 
 ## Prochaine étape recommandée
 
-Les cinq pôles prioritaires du MVP V1 sont opérationnels et l'application est
-désormais autonome. Le prochain lot est le **pôle Finance & Comptabilité V2** :
-trésorerie, dépenses, transactions bancaires, rapprochement et export comptable
-au format FEC. Les tables correspondantes existent déjà dans le schéma.
+Les douze pôles du cahier des charges sont livrés. Ce qui reste relève du
+raccordement au monde extérieur, et non du développement fonctionnel :
+
+1. **Raccorder le formulaire de medactio.fr** à l’endpoint public de capture de
+   leads, déjà développé et testé.
+2. **Brancher Mailjet en SMTP** : aucun email n’est envoyé par l’application à ce
+   stade. Cela conditionne les emails de connexion, les relances impayés et les
+   relances commerciales, aujourd’hui enregistrées mais jamais expédiées.
+3. **Déployer**, puis reprogrammer les tâches `pg_cron` avec l’URL publique et
+   fermer les inscriptions publiques dans Supabase.
+4. **Brancher Stripe et la signature électronique** (Yousign ou DocuSign) : les
+   cycles de statut existent côté application, les API restent à connecter.

@@ -1,6 +1,8 @@
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { crmRouter } from "./routers/crm";
+import { financeRouter } from "./routers/finance";
+import { governanceRouter } from "./routers/governance";
 import { customerSuccessRouter } from "./routers/customer-success";
 import { supportRouter } from "./routers/support";
 import { analyticsRouter } from "./routers/analytics";
@@ -20,6 +22,8 @@ export const appRouter = router({
   support: supportRouter,
   analytics: analyticsRouter,
   marketing: marketingRouter,
+  finance: financeRouter,
+  governance: governanceRouter,
 });
 
 export type AppRouter = typeof appRouter;

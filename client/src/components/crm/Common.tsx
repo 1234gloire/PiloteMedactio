@@ -15,6 +15,15 @@ export const STAGES = [
 ] as const;
 
 export const labels: Record<string, string> = {
+  // Pôle Finance & Comptabilité
+  Hebergement: "Hébergement",
+  "Outils SaaS": "Outils SaaS",
+  Salaires: "Salaires",
+  "Frais Generaux": "Frais généraux",
+  "Outil SaaS Interne": "Outil SaaS interne",
+  "Partenaire Commercial": "Partenaire commercial",
+  Credit: "Crédit",
+  Debit: "Débit",
   "Hopital Public": "Hôpital public",
   "Clinique Privee": "Clinique privée",
   "Groupement Hospitalier": "Groupement hospitalier",
