@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { contacts, organizations, supportTicketEvents } from "../drizzle/schema";
 import { requireDb } from "./db";
+import { notifyRoles } from "./governance.db";
 import { createTicket } from "./support.db";
 
 /**
@@ -113,6 +114,15 @@ export async function openSupportTicket(req: Request, res: Response) {
       content: contact
         ? `Ticket ouvert depuis l’application Medactio par ${contact.fullName}.`
         : `Ticket ouvert depuis l’application Medactio par une adresse inconnue du CRM (${email}).`,
+    });
+
+    void notifyRoles(["admin", "direction", "secretariat"], {
+      category: "Support",
+      message: contact
+        ? `Nouveau ticket client — ${contact.fullName} : ${input.title}`
+        : `Nouveau ticket client — ${input.fullName || email} : ${input.title}`,
+      link: `/support/tickets/${id}`,
+      dedupeKey: `ticket-${id}`,
     });
 
     return res.status(201).json({ success: true, ticketId: id, linked: Boolean(contact) });

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import type { Request, Response } from "express";
 import { z } from "zod";
+import { notifyRoles } from "./governance.db";
 import { captureLead } from "./marketing.db";
 
 /**
@@ -172,6 +173,18 @@ export async function captureMarketingLead(req: Request, res: Response) {
 
     const { website: _, ...payload } = input;
     const created = await captureLead({ ...payload, source: "Site Web" });
+
+    // Un lead se traite vite : le délai de réponse pèse directement sur la
+    // conversion. Seule une première arrivée alerte, un doublon reste muet.
+    if (!created.duplicate) {
+      void notifyRoles(["admin", "direction", "commercial", "marketing"], {
+        category: "Commercial",
+        message: `Nouvelle demande de démonstration — ${input.fullName}, ${input.organizationName}.`,
+        link: "/marketing/leads",
+        dedupeKey: `lead-${created.id}`,
+      });
+    }
+
     return res.status(created.duplicate ? 200 : 201).json({ success: true, duplicate: created.duplicate });
   } catch (error) {
     console.error("[Marketing] Lead capture failed", error);

@@ -517,6 +517,46 @@ export async function markAllRead(userId: number) {
 }
 
 /**
+ * Adresse une alerte aux collaborateurs portant l'un des rôles indiqués.
+ *
+ * Utilisée par les événements qui surviennent hors session utilisateur —
+ * arrivée d'un lead depuis le site, ouverture d'un ticket depuis le produit.
+ * La clé de déduplication reçoit le destinataire en suffixe : chacun dispose
+ * de son exemplaire, et un rejeu ne crée aucun doublon.
+ *
+ * L'échec de la notification ne doit jamais faire échouer l'événement métier
+ * qui l'a déclenchée : perdre un lead serait pire que perdre son alerte.
+ */
+export async function notifyRoles(
+  roles: string[],
+  alert: { category: typeof notifications.$inferInsert["category"]; message: string; link: string; dedupeKey: string }
+) {
+  try {
+    const db = await requireDb();
+    const recipients = (await db.select().from(internalUsers)).filter(member => roles.includes(member.role));
+    let created = 0;
+    for (const recipient of recipients) {
+      const result = await db
+        .insert(notifications)
+        .values({
+          userId: recipient.id,
+          category: alert.category,
+          dedupeKey: `${alert.dedupeKey}-u${recipient.id}`,
+          message: alert.message,
+          link: alert.link,
+        })
+        .onConflictDoNothing({ target: notifications.dedupeKey })
+        .returning({ id: notifications.id });
+      created += result.length;
+    }
+    return { created, recipients: recipients.length };
+  } catch (error) {
+    console.error("[Notifications] Alerte non distribuée", error);
+    return { created: 0, recipients: 0 };
+  }
+}
+
+/**
  * Recalcule les notifications transverses pour les destinataires concernés.
  *
  * Le traitement est idempotent : chaque alerte porte une clé de déduplication

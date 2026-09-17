@@ -2,8 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { labelFor } from "@/components/crm/Common";
 import { trpc } from "@/lib/trpc";
-import { Bell, CheckCheck, Loader2, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { Bell, CheckCheck, Loader2, RefreshCw, Volume2, VolumeX } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { isSoundEnabled, playNotificationSound, primeSound, setSoundEnabled } from "@/lib/notificationSound";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -41,7 +42,12 @@ export default function NotificationCenter() {
   const [, setLocation] = useLocation();
 
   const utils = trpc.useUtils();
-  const unread = trpc.governance.notifications.unreadCount.useQuery(undefined, { refetchInterval: 120_000 });
+  // Un lead ou un ticket client se traite vite : trente secondes suffisent à
+  // rester réactif sans peser sur le serveur.
+  const unread = trpc.governance.notifications.unreadCount.useQuery(undefined, {
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
   const list = trpc.governance.notifications.list.useQuery({ category }, { enabled: open });
   const access = trpc.governance.access.useQuery();
   const markRead = trpc.governance.notifications.markRead.useMutation();
@@ -50,6 +56,37 @@ export default function NotificationCenter() {
 
   const canRefresh = access.data?.role === "admin" || access.data?.role === "direction";
   const count = unread.data?.unread ?? 0;
+
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const previousCount = useRef<number | null>(null);
+
+  // Le son ne se déclenche qu'à l'apparition d'une nouvelle alerte, jamais au
+  // premier chargement ni lorsque le compteur retombe après une lecture.
+  useEffect(() => {
+    const previous = previousCount.current;
+    previousCount.current = count;
+    if (previous !== null && count > previous) playNotificationSound();
+  }, [count]);
+
+  // Les navigateurs refusent toute lecture audio avant une interaction : on
+  // saisit la première pour débloquer les signaux suivants.
+  useEffect(() => {
+    const unlock = () => primeSound();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  // Le titre de l'onglet porte le compteur : il reste visible lorsque la
+  // fenêtre est en arrière-plan, et survit au mode silencieux du poste.
+  useEffect(() => {
+    const base = "Medactio Pilotage";
+    document.title = count > 0 ? `(${count}) ${base}` : base;
+    return () => { document.title = base; };
+  }, [count]);
 
   const reload = async () => {
     await Promise.all([utils.governance.notifications.list.invalidate(), utils.governance.notifications.unreadCount.invalidate()]);
@@ -103,6 +140,20 @@ export default function NotificationCenter() {
                 {refresh.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
               </Button>
             ) : null}
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              title={soundOn ? "Couper le son des notifications" : "Activer le son des notifications"}
+              onClick={() => {
+                const next = !soundOn;
+                setSoundEnabled(next);
+                setSoundOn(next);
+                if (next) { primeSound(); playNotificationSound(); }
+              }}
+            >
+              {soundOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            </Button>
             <Button
               size="icon"
               variant="ghost"
