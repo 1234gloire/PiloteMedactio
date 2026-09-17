@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import {
   auditLog,
@@ -15,6 +16,7 @@ import {
   supportTickets,
 } from "../drizzle/schema";
 import { requireDb } from "./db";
+import { getSupabaseAdmin } from "./_core/supabaseAuth";
 import { storagePut, storageUrlFor } from "./storage";
 import {
   buildDeadlineSchedule,
@@ -207,6 +209,64 @@ export async function getDeadlineSchedule() {
 /* ================================================================== */
 /* RH & ÉQUIPE INTERNE                                                 */
 /* ================================================================== */
+
+/**
+ * Enregistre un collaborateur et lui ouvre un accès.
+ *
+ * L'application n'accepte que les adresses enregistrées ici : cette fonction
+ * est donc le seul point d'entrée d'une nouvelle personne dans l'outil.
+ *
+ * Le compte de connexion est créé dans la foulée avec un mot de passe
+ * provisoire, renvoyé une seule fois à l'administrateur pour qu'il le
+ * transmette. Le collaborateur le changera lui-même depuis l'écran de
+ * connexion. Ce fonctionnement évite de dépendre de l'envoi d'emails.
+ */
+export async function registerCollaborator(
+  input: { fullName: string; email: string; role: string; jobTitle?: string | null },
+  authorId?: number | null
+) {
+  const db = await requireDb();
+  const email = input.email.trim().toLowerCase();
+
+  const existing = await db.select().from(internalUsers).where(eq(internalUsers.email, email)).limit(1);
+  if (existing[0]) throw new Error("Un collaborateur utilise déjà cette adresse.");
+
+  const result = await db
+    .insert(internalUsers)
+    .values({
+      fullName: input.fullName.trim(),
+      email,
+      role: input.role as typeof internalUsers.role.enumValues[number],
+      jobTitle: input.jobTitle?.trim() || null,
+    })
+    .returning({ id: internalUsers.id });
+  const id = result[0].id;
+  await audit("collaborator.register", "internal_users", id, authorId);
+
+  // Mot de passe provisoire : suffisamment long pour ne pas être devinable,
+  // et transmis une seule fois.
+  const temporaryPassword = `Medactio-${randomBytes(9).toString("base64url")}`;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return { id, temporaryPassword: null, accountCreated: false };
+  }
+
+  const { error } = await supabase.auth.admin.createUser({
+    email,
+    password: temporaryPassword,
+    email_confirm: true,
+    user_metadata: { full_name: input.fullName.trim() },
+  });
+
+  if (error) {
+    // Le profil métier existe : l'accès pourra être ouvert manuellement.
+    console.error("[Collaborateur] Création du compte impossible", error);
+    return { id, temporaryPassword: null, accountCreated: false };
+  }
+
+  return { id, temporaryPassword, accountCreated: true };
+}
 
 export async function listTeam() {
   const db = await requireDb();

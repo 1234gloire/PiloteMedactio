@@ -500,3 +500,100 @@ export function ArticleDialog({ open, onOpenChange, initial }: { open: boolean; 
     </Dialog>
   );
 }
+
+const collaboratorRoles = ["admin", "direction", "commercial", "marketing", "secretariat", "finance"] as const;
+
+/**
+ * Enregistrement d'un collaborateur : c'est le seul moyen d'ouvrir un accès à
+ * l'outil. Le mot de passe provisoire n'est affiché qu'une fois.
+ */
+export function CollaboratorDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const utils = trpc.useUtils();
+  const [form, setForm] = useState({ fullName: "", email: "", role: "secretariat", jobTitle: "" });
+  const [result, setResult] = useState<{ temporaryPassword: string | null; accountCreated: boolean } | null>(null);
+  const register = trpc.governance.hr.registerCollaborator.useMutation();
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const created = await register.mutateAsync({
+        fullName: form.fullName,
+        email: form.email,
+        role: form.role as (typeof collaboratorRoles)[number],
+        jobTitle: form.jobTitle || null,
+      });
+      await utils.governance.hr.team.invalidate();
+      setResult(created);
+      toast.success("Collaborateur enregistré.");
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
+  };
+
+  const close = () => { setResult(null); setForm({ fullName: "", email: "", role: "secretariat", jobTitle: "" }); onOpenChange(false); };
+
+  return (
+    <Dialog open={open} onOpenChange={value => (value ? onOpenChange(true) : close())}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{result ? "Accès créé" : "Enregistrer un collaborateur"}</DialogTitle>
+          <DialogDescription>
+            {result
+              ? "Transmettez ces informations à la personne concernée."
+              : "Seules les adresses enregistrées ici peuvent se connecter à la plateforme."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {result ? (
+          <div className="space-y-4">
+            {result.accountCreated && result.temporaryPassword ? (
+              <>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs text-muted-foreground">Adresse de connexion</p>
+                  <p className="mt-1 font-medium text-slate-900">{form.email.trim().toLowerCase()}</p>
+                  <p className="mt-3 text-xs text-muted-foreground">Mot de passe provisoire</p>
+                  <p className="mt-1 select-all font-mono text-sm font-semibold text-slate-900">{result.temporaryPassword}</p>
+                </div>
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                  Ce mot de passe ne sera plus affiché. Transmettez-le par un canal sûr et demandez à la personne de le
+                  changer à sa première connexion, depuis « Mot de passe oublié ».
+                </p>
+              </>
+            ) : (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                Le profil est enregistré, mais le compte de connexion n’a pas pu être créé automatiquement. Créez-le
+                depuis le tableau de bord Supabase avec la même adresse.
+              </p>
+            )}
+            <DialogFooter><Button onClick={close} className="bg-[#123653]">Terminé</Button></DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-4">
+            <Field label="Nom complet">
+              <Input required minLength={2} maxLength={200} value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className={fieldClass} />
+            </Field>
+            <Field label="Adresse professionnelle">
+              <Input required type="email" maxLength={320} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={fieldClass} placeholder="prenom.nom@medactio.fr" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Rôle">
+                <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className={selectClass}>
+                  {collaboratorRoles.map(role => <option key={role} value={role}>{labelFor(role)}</option>)}
+                </select>
+              </Field>
+              <Field label="Intitulé de poste">
+                <Input maxLength={160} value={form.jobTitle} onChange={e => setForm({ ...form, jobTitle: e.target.value })} className={fieldClass} />
+              </Field>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={close}>Annuler</Button>
+              <Button type="submit" disabled={register.isPending} className="bg-[#123653]">
+                {register.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Enregistrer
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

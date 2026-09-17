@@ -70,28 +70,69 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+/**
+ * Erreur levée lorsqu'un compte authentifié ne correspond à aucun
+ * collaborateur enregistré. Les routeurs la traduisent en refus d'accès.
+ */
+export class UnknownCollaboratorError extends Error {
+  constructor(email: string) {
+    super(`Aucun collaborateur Medactio n’est enregistré pour ${email}.`);
+    this.name = "UnknownCollaboratorError";
+  }
+}
+
+/**
+ * Rattache un compte authentifié à son profil métier.
+ *
+ * L'outil est interne : disposer d'un compte d'authentification ne suffit pas
+ * à y accéder. Le collaborateur doit avoir été enregistré au préalable par un
+ * administrateur, qui lui attribue son rôle. Toute autre adresse est refusée,
+ * même si elle possède un compte valide côté fournisseur d'identité.
+ *
+ * Seule l'adresse désignée par `OWNER_EMAIL` peut s'enregistrer d'elle-même,
+ * afin d'amorcer l'installation.
+ */
 export async function ensureInternalProfile(authUser: User) {
   const db = await requireDb();
-  const existing = await db
-    .select()
-    .from(internalUsers)
-    .where(eq(internalUsers.userId, authUser.id))
-    .limit(1);
-  if (existing[0]) return existing[0];
 
-  await db.insert(internalUsers).values({
-    userId: authUser.id,
-    fullName: authUser.name || "Utilisateur Medactio",
-    email: authUser.email || `${authUser.openId}@medactio.local`,
-    role: authUser.role === "admin" ? "admin" : "secretariat",
-    jobTitle: authUser.role === "admin" ? "Administrateur" : "Équipe Medactio",
-  });
-  const created = await db
+  const linked = await db
     .select()
     .from(internalUsers)
     .where(eq(internalUsers.userId, authUser.id))
     .limit(1);
-  return created[0]!;
+  if (linked[0]) return linked[0];
+
+  const email = (authUser.email || "").toLowerCase();
+  if (!email) throw new UnknownCollaboratorError(authUser.openId);
+
+  // Collaborateur déjà enregistré : on rattache son compte d'authentification.
+  const known = await db.select().from(internalUsers).where(eq(internalUsers.email, email)).limit(1);
+  if (known[0]) {
+    if (!known[0].userId) {
+      await db.update(internalUsers).set({ userId: authUser.id }).where(eq(internalUsers.id, known[0].id));
+    }
+    return { ...known[0], userId: authUser.id };
+  }
+
+  // Amorçage : le propriétaire déclaré crée son propre profil administrateur.
+  const owner = (process.env.OWNER_EMAIL || "").toLowerCase();
+  if (owner && email === owner) {
+    await db.insert(internalUsers).values({
+      userId: authUser.id,
+      fullName: authUser.name || "Administrateur Medactio",
+      email,
+      role: "admin",
+      jobTitle: "Administrateur",
+    });
+    const created = await db
+      .select()
+      .from(internalUsers)
+      .where(eq(internalUsers.userId, authUser.id))
+      .limit(1);
+    return created[0]!;
+  }
+
+  throw new UnknownCollaboratorError(email);
 }
 
 export async function listInternalUsers() {

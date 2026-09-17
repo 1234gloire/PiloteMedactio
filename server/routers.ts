@@ -1,4 +1,5 @@
 import { systemRouter } from "./_core/systemRouter";
+import { ensureInternalProfile, UnknownCollaboratorError } from "./db";
 import { publicProcedure, router } from "./_core/trpc";
 import { crmRouter } from "./routers/crm";
 import { financeRouter } from "./routers/finance";
@@ -11,7 +12,18 @@ import { marketingRouter } from "./routers/marketing";
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    // Une adresse authentifiée mais non enregistrée ne doit pas voir
+    // l'application : l'interface la renvoie vers l'écran de connexion.
+    me: publicProcedure.query(async opts => {
+      if (!opts.ctx.user) return null;
+      try {
+        await ensureInternalProfile(opts.ctx.user);
+        return opts.ctx.user;
+      } catch (error) {
+        if (error instanceof UnknownCollaboratorError) return null;
+        throw error;
+      }
+    }),
     // La session est détenue par Supabase côté navigateur : sa révocation est
     // faite par le client (`supabase.auth.signOut()`). Ce point d'entrée reste
     // le signal de fin de session côté serveur.

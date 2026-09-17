@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DirectionGate } from "@/components/crm/Analytics";
 import { EmptyState, PageHeader, StatCard, formatDate, labelFor } from "@/components/crm/Common";
-import { GoalDialog, LeaveDialog } from "@/components/crm/GovernanceForms";
+import { CollaboratorDialog, GoalDialog, LeaveDialog } from "@/components/crm/GovernanceForms";
 import { trpc } from "@/lib/trpc";
 import { CalendarDays, Check, Loader2, Plus, Target, UserRound, Users, X } from "lucide-react";
 import { useState } from "react";
@@ -19,10 +19,13 @@ const leaveTone: Record<string, string> = {
 export default function Team() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [goalDialog, setGoalDialog] = useState<{ open: boolean; item?: any }>({ open: false });
+  const [collaboratorOpen, setCollaboratorOpen] = useState(false);
 
   const utils = trpc.useUtils();
   const access = trpc.governance.access.useQuery();
   const isManager = access.data?.hrAdmin === true;
+  // Ouvrir un accès relève de l\u2019administration seule.
+  const isAdmin = access.data?.role === "admin";
   const team = trpc.governance.hr.team.useQuery(undefined, { enabled: isManager });
   const leaves = trpc.governance.hr.leaves.useQuery(undefined, { enabled: access.data !== undefined });
   const decide = trpc.governance.hr.decideLeave.useMutation();
@@ -63,6 +66,11 @@ export default function Team() {
               <div className="flex min-h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
             ) : team.data?.length ? (
               <>
+                {isAdmin ? (
+                  <Button onClick={() => setCollaboratorOpen(true)} className="mb-5 bg-[#123653]">
+                    <Plus className="mr-2 h-4 w-4" />Enregistrer un collaborateur
+                  </Button>
+                ) : null}
                 <div className="mb-5 grid gap-4 sm:grid-cols-3">
                   <StatCard label="Collaborateurs" value={String(team.data.length)} icon={Users} accent="navy" />
                   <StatCard label="Congés à valider" value={String(pending.length)} icon={CalendarDays} accent={pending.length ? "amber" : "teal"} />
@@ -175,6 +183,7 @@ export default function Team() {
       </Tabs>
 
       <LeaveDialog open={leaveOpen} onOpenChange={setLeaveOpen} />
+      <CollaboratorDialog open={collaboratorOpen} onOpenChange={setCollaboratorOpen} />
       {goalDialog.open ? (
         <GoalDialog key={goalDialog.item?.userId ?? "new"} open={goalDialog.open} onOpenChange={open => setGoalDialog({ open })} userId={goalDialog.item?.userId} />
       ) : null}

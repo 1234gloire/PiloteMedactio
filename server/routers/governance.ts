@@ -245,6 +245,30 @@ export const governanceRouter = router({
       return gov.deleteLeaveRequest(input.id, profile.id);
     }),
 
+    registerCollaborator: protectedProcedure
+      .input(z.object({
+        fullName: z.string().trim().min(2).max(200),
+        email: z.string().trim().email().max(320),
+        role: z.enum(["admin", "direction", "commercial", "marketing", "secretariat", "finance"]),
+        jobTitle: z.string().trim().max(160).optional().nullable(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await profileFor(ctx);
+        // Ouvrir un accès est une action d'administration : la direction
+        // consulte l'équipe mais n'accorde pas les droits.
+        if (profile.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Seul un administrateur peut enregistrer un collaborateur." });
+        }
+        try {
+          return await gov.registerCollaborator(input, profile.id);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error instanceof Error ? error.message : "Enregistrement impossible.",
+          });
+        }
+      }),
+
     createGoal: protectedProcedure
       .input(z.object({
         userId: z.number().int().positive(),
