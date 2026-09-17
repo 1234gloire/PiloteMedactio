@@ -79,10 +79,9 @@ export async function authenticateSupabaseRequest(req: Request): Promise<User | 
     ...(isOwner ? { role: "admin" as const } : {}),
   });
 
-  const user = await db.getUserByOpenId(authUser.id);
-  if (!user) return null;
-
-  // Garantit l'existence du profil métier (rôle, intitulé de poste).
-  await db.ensureInternalProfile(user);
-  return user;
+  // Le rattachement au profil métier n'est pas fait ici : il relève du
+  // contrôle d'accès, porté par la procédure protégée, qui peut alors
+  // répondre explicitement à une adresse non enregistrée plutôt que de la
+  // traiter comme une absence de session.
+  return (await db.getUserByOpenId(authUser.id)) ?? null;
 }
