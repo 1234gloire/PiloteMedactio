@@ -15,6 +15,7 @@ import {
   supportTickets,
 } from "../drizzle/schema";
 import { requireDb } from "./db";
+import { sendMail } from "./_core/mailer";
 import { storagePut, storageUrlFor } from "./storage";
 import {
   buildSupportAlertCandidates,
@@ -138,6 +139,27 @@ export async function updateTicket(id: number, data: Partial<typeof supportTicke
   if (data.status && data.status !== current.status) {
     await db.insert(supportTicketEvents).values({ ticketId: id, authorId: authorId ?? null, eventType: "Changement Statut", content: `Statut modifié : ${current.status} → ${data.status}.` });
   }
+
+  // La résolution est le seul changement de statut qui intéresse le
+  // demandeur : les étapes intermédiaires relèvent du suivi interne.
+  if (data.status === "Resolu" && current.status !== "Resolu") {
+    const recipient = await ticketRecipient(current);
+    if (recipient) {
+      void sendMail({
+        to: recipient.email,
+        toName: recipient.name,
+        subject: `Votre demande a été traitée — ${current.title}`,
+        text: `Bonjour${recipient.name ? ` ${recipient.name}` : ""},
+
+Votre demande d’assistance « ${current.title} » vient d’être traitée par notre équipe.
+
+Si le problème persiste ou si la réponse ne vous paraît pas complète, répondez simplement à cet email : nous rouvrirons votre demande.
+
+L’équipe support Medactio`,
+      });
+    }
+  }
+
   return { success: true } as const;
 }
 
@@ -147,6 +169,22 @@ export async function deleteTicket(id: number) {
   return { success: true } as const;
 }
 
+/**
+ * Adresse à laquelle répondre à un demandeur, et son nom.
+ *
+ * Un ticket ouvert depuis le produit par une adresse inconnue du CRM reste
+ * joignable : son adresse figure dans la description, faute de contact.
+ */
+async function ticketRecipient(ticket: typeof supportTickets.$inferSelect) {
+  const db = await requireDb();
+  if (ticket.contactId) {
+    const contact = (await db.select().from(contacts).where(eq(contacts.id, ticket.contactId)).limit(1))[0];
+    if (contact?.email) return { email: contact.email, name: contact.fullName };
+  }
+  const match = (ticket.description || "").match(/<([^>]+@[^>]+)>/);
+  return match ? { email: match[1], name: null as string | null } : null;
+}
+
 export async function addTicketEvent(data: typeof supportTicketEvents.$inferInsert) {
   const db = await requireDb();
   const result = await db.insert(supportTicketEvents).values(data).returning({ id: supportTicketEvents.id });
@@ -154,7 +192,31 @@ export async function addTicketEvent(data: typeof supportTicketEvents.$inferInse
   if (ticket && !ticket.firstRespondedAt) {
     await db.update(supportTickets).set({ firstRespondedAt: new Date(), status: ticket.status === "Nouveau" ? "En cours" : ticket.status }).where(eq(supportTickets.id, data.ticketId));
   }
-  return { id: result[0].id };
+
+  // Seuls les échanges destinés au client lui sont transmis : une note interne
+  // reste interne.
+  const visibleToClient = data.eventType === "Commentaire" || data.eventType === "Relance Client";
+  let mail: { sent: boolean; reason?: string } = { sent: false, reason: "Échange interne." };
+
+  if (ticket && visibleToClient) {
+    const recipient = await ticketRecipient(ticket);
+    mail = recipient
+      ? await sendMail({
+          to: recipient.email,
+          toName: recipient.name,
+          subject: `Votre demande d’assistance — ${ticket.title}`,
+          text: `Bonjour${recipient.name ? ` ${recipient.name}` : ""},
+
+${data.content}
+
+Vous pouvez répondre directement à cet email : votre réponse nous parviendra.
+
+L’équipe support Medactio`,
+        })
+      : { sent: false, reason: "Aucune adresse connue pour ce demandeur." };
+  }
+
+  return { id: result[0].id, mail };
 }
 
 export async function listTasks(input?: { search?: string; status?: string; assignedTo?: number }) {
@@ -263,7 +325,40 @@ export async function remindInvoice(id: number, userId?: number | null) {
     status: invoice.status === "Envoyee" && Number(daysUntil(invoice.dueDate, now)) < 0 ? "En Retard" : invoice.status,
   }).where(eq(invoices.id, id));
   await audit("REMINDER", "invoices", id, userId);
-  return { success: true, nextReminderDate } as const;
+
+  // La relance part vers le contact de facturation de l'établissement. Un
+  // échec d'envoi n'annule pas la relance : elle reste enregistrée et pourra
+  // être renvoyée.
+  const organization = (await db.select().from(organizations).where(eq(organizations.id, invoice.organizationId)).limit(1))[0];
+  const recipient = (
+    await db.select().from(contacts).where(eq(contacts.organizationId, invoice.organizationId)).limit(1)
+  )[0];
+
+  if (!recipient?.email) {
+    return { success: true, nextReminderDate, mail: { sent: false, reason: "Aucun contact à relancer pour cet établissement." } } as const;
+  }
+
+  const amount = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(Number(invoice.amount));
+  const overdue = Number(daysUntil(invoice.dueDate, now)) < 0;
+
+  const mail = await sendMail({
+    to: recipient.email,
+    toName: recipient.fullName,
+    subject: `Facture ${invoice.invoiceNumber} — ${overdue ? "en attente de règlement" : "rappel d’échéance"}`,
+    text: `Bonjour ${recipient.fullName},
+
+${overdue
+  ? `Sauf erreur de notre part, la facture ${invoice.invoiceNumber} d’un montant de ${amount}, échue le ${invoice.dueDate}, reste à ce jour impayée.`
+  : `Nous vous rappelons que la facture ${invoice.invoiceNumber} d’un montant de ${amount} arrive à échéance le ${invoice.dueDate}.`}
+
+Si le règlement a déjà été effectué, merci de ne pas tenir compte de ce message.
+
+Pour toute question, répondez simplement à cet email.
+
+L’équipe Medactio${organization ? `\n${organization.name}` : ""}`,
+  });
+
+  return { success: true, nextReminderDate, mail } as const;
 }
 
 export async function deleteInvoice(id: number, userId?: number | null) {
