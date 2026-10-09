@@ -612,6 +612,25 @@ export const usageLogs = pgTable("usage_logs", {
   logDate: date("logDate", { mode: "string" }).notNull(),
 });
 
+/**
+ * Modèles de message réutilisables pour la rédaction d'emails.
+ *
+ * Le corps accepte des variables remplacées à l'ouverture du modèle :
+ * {{contact}}, {{etablissement}}, {{expediteur}}, {{poste}}.
+ */
+export const emailTemplates = pgTable("email_templates", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 160 }).notNull(),
+  category: varchar("category", { length: 32, enum: ["Commercial", "Support", "Marketing", "Facturation", "General"] })
+    .default("General")
+    .notNull(),
+  subject: varchar("subject", { length: 240 }).notNull(),
+  body: text("body").notNull(),
+  createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+});
+
 export const notifications = pgTable("notifications", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId")

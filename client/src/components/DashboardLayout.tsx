@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, Banknote, BarChart3, BookOpen, Building2, CalendarDays, ClipboardCheck, Columns3, Download, FileCheck2, FileSpreadsheet, Headphones, HeartPulse, Handshake, Landmark, LayoutDashboard, Lightbulb, LogOut, Megaphone, PanelLeft, ReceiptText, Scale, ShieldCheck, Target, UserRound, UserRoundPlus, Users } from "lucide-react";
+import { Activity, Banknote, BarChart3, BookOpen, Mail, Building2, CalendarDays, ClipboardCheck, Columns3, Download, FileCheck2, FileSpreadsheet, Headphones, HeartPulse, Handshake, Landmark, LayoutDashboard, Lightbulb, LogOut, Megaphone, PanelLeft, ReceiptText, Scale, ShieldCheck, Target, UserRound, UserRoundPlus, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import LoginScreen from "./LoginScreen";
@@ -38,6 +38,7 @@ const marketingItems = [
   { icon: CalendarDays, label: "Calendrier éditorial", path: "/marketing/calendrier" },
   { icon: UserRoundPlus, label: "Leads", path: "/marketing/leads" },
   { icon: BookOpen, label: "Bibliothèque", path: "/marketing/bibliotheque" },
+  { icon: Mail, label: "Modèles d’email", path: "/messages" },
 ];
 
 const financeItems = [

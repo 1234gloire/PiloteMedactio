@@ -31,6 +31,7 @@ import MarketingCampaignDetail from "./pages/MarketingCampaignDetail";
 import MarketingCalendar from "./pages/MarketingCalendar";
 import MarketingLeads from "./pages/MarketingLeads";
 import MarketingLibrary from "./pages/MarketingLibrary";
+import EmailTemplates from "./pages/EmailTemplates";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import Expenses from "./pages/Expenses";
 import BankTransactions from "./pages/BankTransactions";
@@ -70,6 +71,7 @@ function Router() {
     <Route path="/finance/depenses" component={Expenses} />
     <Route path="/finance/rapprochement" component={BankTransactions} />
     <Route path="/finance/export" component={FinanceExports} />
+    <Route path="/messages" component={EmailTemplates} />
     <Route path="/juridique" component={Legal} />
     <Route path="/fournisseurs" component={Suppliers} />
     <Route path="/rh" component={Team} />

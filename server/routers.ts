@@ -2,6 +2,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { ensureInternalProfile, UnknownCollaboratorError } from "./db";
 import { publicProcedure, router } from "./_core/trpc";
 import { crmRouter } from "./routers/crm";
+import { emailRouter } from "./routers/email";
 import { financeRouter } from "./routers/finance";
 import { governanceRouter } from "./routers/governance";
 import { customerSuccessRouter } from "./routers/customer-success";
@@ -36,6 +37,7 @@ export const appRouter = router({
   marketing: marketingRouter,
   finance: financeRouter,
   governance: governanceRouter,
+  email: emailRouter,
 });
 
 export type AppRouter = typeof appRouter;

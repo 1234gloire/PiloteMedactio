@@ -22,6 +22,11 @@ export type MailInput = {
   text: string;
   /** Corps HTML facultatif. À défaut, le texte brut est mis en forme. */
   html?: string;
+  /**
+   * Adresse à laquelle le destinataire répondra. Permet qu'une réponse
+   * revienne au collaborateur qui a écrit, et non à une boîte collective.
+   */
+  replyTo?: string | null;
 };
 
 function config() {
@@ -92,7 +97,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
         Messages: [
           {
             From: { Email: settings.from, Name: settings.fromName },
-            ReplyTo: { Email: settings.replyTo },
+            ReplyTo: { Email: input.replyTo || settings.replyTo },
             To: [{ Email: input.to, Name: input.toName || input.to }],
             Subject: input.subject,
             TextPart: input.text,
