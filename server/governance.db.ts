@@ -480,6 +480,9 @@ export async function listArticles(input?: { search?: string; category?: string 
       title: knowledgeBaseArticles.title,
       category: knowledgeBaseArticles.category,
       content: knowledgeBaseArticles.content,
+      documentKey: knowledgeBaseArticles.documentKey,
+      documentName: knowledgeBaseArticles.documentName,
+      documentMimeType: knowledgeBaseArticles.documentMimeType,
       authorId: knowledgeBaseArticles.authorId,
       authorName: internalUsers.fullName,
       createdAt: knowledgeBaseArticles.createdAt,
@@ -489,10 +492,14 @@ export async function listArticles(input?: { search?: string; category?: string 
     .leftJoin(internalUsers, eq(knowledgeBaseArticles.authorId, internalUsers.id))
     .orderBy(desc(knowledgeBaseArticles.updatedAt));
 
-  return searchArticles(rows, input?.search, input?.category).map(article => ({
-    ...article,
-    excerpt: excerpt(article.content),
-  }));
+  const filtered = searchArticles(rows, input?.search, input?.category);
+  return Promise.all(
+    filtered.map(async article => ({
+      ...article,
+      excerpt: excerpt(article.content ?? ""),
+      documentUrl: await storageUrlFor(article.documentKey),
+    }))
+  );
 }
 
 export async function getArticle(id: number) {
@@ -503,6 +510,9 @@ export async function getArticle(id: number) {
       title: knowledgeBaseArticles.title,
       category: knowledgeBaseArticles.category,
       content: knowledgeBaseArticles.content,
+      documentKey: knowledgeBaseArticles.documentKey,
+      documentName: knowledgeBaseArticles.documentName,
+      documentMimeType: knowledgeBaseArticles.documentMimeType,
       authorId: knowledgeBaseArticles.authorId,
       authorName: internalUsers.fullName,
       createdAt: knowledgeBaseArticles.createdAt,
@@ -512,7 +522,39 @@ export async function getArticle(id: number) {
     .leftJoin(internalUsers, eq(knowledgeBaseArticles.authorId, internalUsers.id))
     .where(eq(knowledgeBaseArticles.id, id))
     .limit(1);
-  return rows[0] || null;
+  if (!rows[0]) return null;
+  return { ...rows[0], documentUrl: await storageUrlFor(rows[0].documentKey) };
+}
+
+/**
+ * Attache un document à un article. Le fichier rejoint le compartiment privé,
+ * la base ne conserve que sa clé : le lien de consultation est signé à chaque
+ * affichage, comme pour les contrats et les supports marketing.
+ */
+export async function uploadArticleDocument(
+  id: number,
+  file: { fileName: string; mimeType: string; base64: string }
+) {
+  const db = await requireDb();
+  const bytes = Buffer.from(file.base64.split(",").pop() || "", "base64");
+  if (!bytes.length) throw new Error("Le fichier transmis est vide.");
+  const safeName = file.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const uploaded = await storagePut(`connaissances/${id}/${safeName}`, bytes, file.mimeType);
+  await db
+    .update(knowledgeBaseArticles)
+    .set({ documentKey: uploaded.key, documentName: file.fileName, documentMimeType: file.mimeType })
+    .where(eq(knowledgeBaseArticles.id, id));
+  return { success: true } as const;
+}
+
+/** Détache le document d'un article, sans supprimer l'article lui-même. */
+export async function removeArticleDocument(id: number) {
+  const db = await requireDb();
+  await db
+    .update(knowledgeBaseArticles)
+    .set({ documentKey: null, documentName: null, documentMimeType: null })
+    .where(eq(knowledgeBaseArticles.id, id));
+  return { success: true } as const;
 }
 
 export async function createArticle(data: typeof knowledgeBaseArticles.$inferInsert) {

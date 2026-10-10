@@ -15,6 +15,17 @@ export const STAGES = [
 ] as const;
 
 export const labels: Record<string, string> = {
+  // Base de connaissances — classement des procédures Medactio
+  ACH: "ACH — Achats et contractualisation",
+  ACT: "ACT — Activation et formation",
+  COM: "COM — Cycle commercial",
+  CONF: "CONF — Conformité et sécurité",
+  CSM: "CSM — Succès client et rétention",
+  DIR: "DIR — Direction",
+  INT: "INT — Process internes",
+  MKT: "MKT — Marketing et acquisition",
+  PROD: "PROD — Produit",
+  SUP: "SUP — Support et SAV",
   // Pôle Finance & Comptabilité
   Hebergement: "Hébergement",
   "Outils SaaS": "Outils SaaS",

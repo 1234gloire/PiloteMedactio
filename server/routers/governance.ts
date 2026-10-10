@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import { knowledgeCategories } from "../../drizzle/schema";
 import * as gov from "../governance.db";
 
 type Ctx = { user: NonNullable<Parameters<typeof db.ensureInternalProfile>[0]> };
@@ -379,8 +380,8 @@ export const governanceRouter = router({
     create: protectedProcedure
       .input(z.object({
         title: z.string().trim().min(3).max(240),
-        category: z.enum(["Commercial", "Support", "Marketing", "General"]).default("General"),
-        content: z.string().trim().min(10).max(100_000),
+        category: z.enum(knowledgeCategories).default("INT"),
+        content: z.string().trim().max(100_000).optional().nullable(),
       }))
       .mutation(async ({ ctx, input }) => {
         const profile = await profileFor(ctx);
@@ -391,8 +392,8 @@ export const governanceRouter = router({
       .input(z.object({
         id: z.number().int().positive(),
         title: z.string().trim().min(3).max(240).optional(),
-        category: z.enum(["Commercial", "Support", "Marketing", "General"]).optional(),
-        content: z.string().trim().min(10).max(100_000).optional(),
+        category: z.enum(knowledgeCategories).optional(),
+        content: z.string().trim().max(100_000).optional().nullable(),
       }))
       .mutation(async ({ ctx, input }) => {
         const profile = await profileFor(ctx);
@@ -405,6 +406,34 @@ export const governanceRouter = router({
         const { id: articleId, ...rest } = input;
         return gov.updateArticle(articleId, rest);
       }),
+
+    upload: protectedProcedure
+      .input(z.object({
+        id: z.number().int().positive(),
+        fileName: z.string().min(1).max(240),
+        mimeType: z.string().min(1).max(160),
+        base64: z.string().min(1).max(14_000_000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await profileFor(ctx);
+        const article = await gov.getArticle(input.id);
+        if (!article) throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+        if (article.authorId !== profile.id && !["admin", "direction"].includes(profile.role)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Seul l’auteur de l’article peut y joindre un document." });
+        }
+        const { id: articleId, ...file } = input;
+        return gov.uploadArticleDocument(articleId, file);
+      }),
+
+    removeDocument: protectedProcedure.input(id).mutation(async ({ ctx, input }) => {
+      const profile = await profileFor(ctx);
+      const article = await gov.getArticle(input.id);
+      if (!article) throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+      if (article.authorId !== profile.id && !["admin", "direction"].includes(profile.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Seul l’auteur de l’article peut retirer son document." });
+      }
+      return gov.removeArticleDocument(input.id);
+    }),
 
     delete: protectedProcedure.input(id).mutation(async ({ ctx, input }) => {
       const profile = await profileFor(ctx);

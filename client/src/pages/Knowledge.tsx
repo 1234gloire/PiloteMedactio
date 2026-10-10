@@ -5,17 +5,23 @@ import { Input } from "@/components/ui/input";
 import { EmptyState, PageHeader, formatDate, labelFor } from "@/components/crm/Common";
 import { ArticleDialog } from "@/components/crm/GovernanceForms";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, BookOpen, Loader2, Pencil, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Download, FileText, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const categories = ["Toutes", "Commercial", "Support", "Marketing", "General"] as const;
+const categories = ["Toutes", "ACH", "ACT", "COM", "CONF", "CSM", "DIR", "INT", "MKT", "PROD", "SUP"] as const;
 
 const categoryTone: Record<string, string> = {
-  Commercial: "bg-teal-50 text-teal-700",
-  Support: "bg-sky-50 text-sky-700",
-  Marketing: "bg-violet-50 text-violet-700",
-  General: "bg-slate-100 text-slate-600",
+  COM: "bg-teal-50 text-teal-700",
+  CSM: "bg-teal-50 text-teal-700",
+  SUP: "bg-sky-50 text-sky-700",
+  ACT: "bg-sky-50 text-sky-700",
+  MKT: "bg-violet-50 text-violet-700",
+  PROD: "bg-violet-50 text-violet-700",
+  CONF: "bg-amber-50 text-amber-800",
+  ACH: "bg-amber-50 text-amber-800",
+  DIR: "bg-[#123653]/8 text-[#123653]",
+  INT: "bg-slate-100 text-slate-600",
 };
 
 export default function Knowledge() {
@@ -76,7 +82,16 @@ export default function Knowledge() {
                   </div>
                 ) : null}
               </div>
-              <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{article.data.content}</div>
+              {article.data.documentUrl ? (
+                <Button variant="outline" asChild className="mb-5 bg-white">
+                  <a href={article.data.documentUrl} target="_blank" rel="noreferrer">
+                    <Download className="mr-2 h-4 w-4" />{article.data.documentName || "Document joint"}
+                  </a>
+                </Button>
+              ) : null}
+              {article.data.content ? (
+                <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{article.data.content}</div>
+              ) : null}
             </CardContent>
           </Card>
         ) : (
@@ -130,7 +145,10 @@ export default function Knowledge() {
               <CardContent className="p-5">
                 <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${categoryTone[item.category]}`}>{labelFor(item.category)}</span>
                 <h2 className="mt-3 line-clamp-2 min-h-12 font-semibold leading-6 text-slate-950">{item.title}</h2>
-                <p className="mt-2 line-clamp-3 min-h-15 text-sm leading-5 text-muted-foreground">{item.excerpt}</p>
+                <p className="mt-2 line-clamp-3 min-h-15 text-sm leading-5 text-muted-foreground">{item.excerpt || "Document joint, sans texte."}</p>
+                {item.documentName ? (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-teal-700"><FileText className="h-3.5 w-3.5" />{item.documentName}</p>
+                ) : null}
                 <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-muted-foreground">
                   {item.authorName || "Auteur inconnu"} · {formatDate(item.updatedAt)}
                 </p>

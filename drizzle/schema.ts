@@ -769,11 +769,33 @@ export const changelogEntries = pgTable("changelog_entries", {
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Catégories reprises de l'arborescence des procédures de Medactio, afin que
+ * la base de connaissances suive le classement déjà utilisé par l'équipe.
+ */
+export const knowledgeCategories = [
+  "ACH",
+  "ACT",
+  "COM",
+  "CONF",
+  "CSM",
+  "DIR",
+  "INT",
+  "MKT",
+  "PROD",
+  "SUP",
+] as const;
+
 export const knowledgeBaseArticles = pgTable("knowledge_base_articles", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 240 }).notNull(),
-  category: varchar("category", { length: 32, enum: ["Commercial", "Support", "Marketing", "General"] }).default("General").notNull(),
-  content: text("content").notNull(),
+  category: varchar("category", { length: 32, enum: knowledgeCategories }).default("INT").notNull(),
+  // Un article peut se réduire à un document joint : le texte devient alors
+  // une simple présentation, voire rien du tout.
+  content: text("content"),
+  documentKey: text("documentKey"),
+  documentName: varchar("documentName", { length: 240 }),
+  documentMimeType: varchar("documentMimeType", { length: 160 }),
   authorId: integer("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),

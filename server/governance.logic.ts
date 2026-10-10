@@ -184,7 +184,7 @@ export function summarizeRoadmap(requests: { status: string; type: string }[]) {
 /* ------------------------------------------------------------------ */
 
 /** Recherche plein texte simple : tous les mots doivent apparaître. */
-export function searchArticles<T extends { title: string; content: string; category: string }>(
+export function searchArticles<T extends { title: string; content: string | null; category: string }>(
   articles: T[],
   query?: string,
   category?: string
@@ -198,7 +198,7 @@ export function searchArticles<T extends { title: string; content: string; categ
   return articles.filter(article => {
     if (category && category !== "Toutes" && article.category !== category) return false;
     if (!terms.length) return true;
-    const haystack = `${article.title} ${article.content}`.toLowerCase();
+    const haystack = `${article.title} ${article.content ?? ""}`.toLowerCase();
     return terms.every(term => haystack.includes(term));
   });
 }
