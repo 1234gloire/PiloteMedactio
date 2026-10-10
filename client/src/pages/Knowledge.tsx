@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState, PageHeader, formatDate, labelFor } from "@/components/crm/Common";
 import { ArticleDialog } from "@/components/crm/GovernanceForms";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, BookOpen, Download, FileText, Loader2, Pencil, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Download, Eye, EyeOff, FileText, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -24,12 +24,77 @@ const categoryTone: Record<string, string> = {
   INT: "bg-slate-100 text-slate-600",
 };
 
+
+/** Formats que le navigateur sait afficher sans outil tiers. */
+function canPreview(mimeType?: string | null) {
+  const type = (mimeType || "").toLowerCase();
+  return type.includes("pdf") || type.startsWith("image/") || type.startsWith("text/");
+}
+
+/**
+ * Consultation d'un document joint.
+ *
+ * Les PDF, images et fichiers texte s'affichent directement. Les documents
+ * Word ne sont pas prévisualisables : les afficher supposerait de transmettre
+ * le lien à un service de conversion tiers, ce qui est exclu pour une
+ * entreprise du secteur de la santé. Ils restent téléchargeables.
+ */
+function DocumentViewer({
+  url,
+  name,
+  mimeType,
+  open,
+  onToggle,
+}: {
+  url: string;
+  name?: string | null;
+  mimeType?: string | null;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const previewable = canPreview(mimeType);
+
+  return (
+    <div className="mb-6">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 p-3">
+        <FileText className="h-4 w-4 shrink-0 text-slate-500" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{name || "Document joint"}</span>
+        {previewable ? (
+          <Button size="sm" variant="outline" className="bg-white" onClick={onToggle}>
+            {open ? <><EyeOff className="mr-2 h-4 w-4" />Masquer</> : <><Eye className="mr-2 h-4 w-4" />Lire</>}
+          </Button>
+        ) : null}
+        <Button size="sm" variant="outline" asChild className="bg-white">
+          <a href={url} target="_blank" rel="noreferrer"><Download className="mr-2 h-4 w-4" />Télécharger</a>
+        </Button>
+      </div>
+
+      {previewable && open ? (
+        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {(mimeType || "").toLowerCase().startsWith("image/") ? (
+            <img src={url} alt={name || "Document"} className="mx-auto max-h-[70vh] w-auto" />
+          ) : (
+            <iframe src={url} title={name || "Document"} className="h-[70vh] w-full border-0" />
+          )}
+        </div>
+      ) : null}
+
+      {!previewable ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Les documents Word ne s’affichent pas dans le navigateur. Téléchargez-le pour le consulter.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Knowledge() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("Toutes");
   const [openId, setOpenId] = useState<number | null>(null);
   const [dialog, setDialog] = useState<{ open: boolean; item?: any }>({ open: false });
   const [deleting, setDeleting] = useState<any | null>(null);
+  const [preview, setPreview] = useState(true);
 
   const utils = trpc.useUtils();
   const profile = trpc.governance.profile.useQuery();
@@ -83,11 +148,13 @@ export default function Knowledge() {
                 ) : null}
               </div>
               {article.data.documentUrl ? (
-                <Button variant="outline" asChild className="mb-5 bg-white">
-                  <a href={article.data.documentUrl} target="_blank" rel="noreferrer">
-                    <Download className="mr-2 h-4 w-4" />{article.data.documentName || "Document joint"}
-                  </a>
-                </Button>
+                <DocumentViewer
+                  url={article.data.documentUrl}
+                  name={article.data.documentName}
+                  mimeType={article.data.documentMimeType}
+                  open={preview}
+                  onToggle={() => setPreview(value => !value)}
+                />
               ) : null}
               {article.data.content ? (
                 <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{article.data.content}</div>
