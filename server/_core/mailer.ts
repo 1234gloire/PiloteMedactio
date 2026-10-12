@@ -34,11 +34,17 @@ function config() {
   const privateKey = process.env.MJ_APIKEY_PRIVATE;
   const from = process.env.MAIL_FROM;
   if (!publicKey || !privateKey || !from) return null;
+  const configuredName = process.env.MAIL_FROM_NAME?.trim();
+  // Remplace les anciennes identités sans imposer une modification du serveur.
+  const fromName = !configuredName || /^medactio(?: pilotage)?$/i.test(configuredName)
+    || configuredName.toLowerCase() === from.trim().toLowerCase()
+    ? "Equipe Medactio"
+    : configuredName;
   return {
     publicKey,
     privateKey,
     from,
-    fromName: process.env.MAIL_FROM_NAME || "Medactio",
+    fromName,
     replyTo: process.env.MAIL_REPLY_TO || from,
   };
 }
@@ -70,7 +76,7 @@ export function wrapHtml(title: string, body: string): string {
   return `<!doctype html><html lang="fr"><body style="margin:0;background:#f4f8f8;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 <table role="presentation" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px;">
 <tr><td>
-<p style="margin:0 0 24px;font-weight:700;letter-spacing:.14em;font-size:12px;color:#123653;">MEDACTIO</p>
+<p style="margin:0 0 24px;font-weight:700;letter-spacing:.14em;font-size:12px;color:#123653;">Medactio</p>
 <h1 style="margin:0 0 20px;font-size:20px;line-height:1.3;color:#0f172a;">${escapeHtml(title)}</h1>
 ${paragraphs}
 <p style="margin:28px 0 0;padding-top:16px;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8;">
