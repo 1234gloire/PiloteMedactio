@@ -36,6 +36,13 @@
       "when": 1791638516139,
       "tag": "0004_knowledge_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791819420562,
+      "tag": "0005_stripe_references",
+      "breakpoints": true
     }
   ]
 }

@@ -358,6 +358,10 @@ export const subscriptions = pgTable("subscriptions", {
   startDate: date("startDate", { mode: "string" }),
   renewalDate: date("renewalDate", { mode: "string" }),
   cancelledAt: date("cancelledAt", { mode: "string" }),
+  // Références Stripe, pour rapprocher un abonnement du paiement réel et
+  // éviter tout doublon lorsqu'un même événement est relayé deux fois.
+  stripeCustomerId: varchar("stripeCustomerId", { length: 80 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 80 }).unique(),
   cancellationReason: text("cancellationReason"),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -448,6 +452,8 @@ export const invoices = pgTable("invoices", {
     onDelete: "set null",
   }),
   invoiceNumber: varchar("invoiceNumber", { length: 80 }).notNull().unique(),
+  // Identifiant de la facture Stripe lorsqu'elle provient d'un prélèvement.
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 80 }).unique(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   status: varchar("status", { length: 32, enum: ["Brouillon", "Envoyee", "Payee", "En Retard"] })
     .default("Brouillon")

@@ -9,6 +9,7 @@ import { runCustomerSuccessAlerts } from "../customer-success.scheduler";
 import { runSupportAlerts } from "../support.scheduler";
 import { applyLeadCaptureCors, captureMarketingLead } from "../marketing.capture";
 import { openSupportTicket } from "../support.intake";
+import { receiveBillingEvent } from "../billing.intake";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -44,6 +45,8 @@ async function startServer() {
   app.post("/api/public/marketing/leads", captureMarketingLead);
   // Ouverture de ticket depuis le produit Medactio (serveur à serveur).
   app.post("/api/public/support/tickets", openSupportTicket);
+  // Abonnements et paiements relayés par le produit Medactio.
+  app.post("/api/public/billing/events", receiveBillingEvent);
   // tRPC API
   app.use(
     "/api/trpc",
