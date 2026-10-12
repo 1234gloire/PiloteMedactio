@@ -166,8 +166,8 @@ export async function composeAndSend(input: ComposeInput, author: typeof interna
   const variables: MessageVariables = {
     contact: recipient.name,
     etablissement: recipient.organizationName,
-    expediteur: author.fullName,
-    poste: author.jobTitle,
+    expediteur: "Equipe Medactio",
+    poste: "",
   };
 
   const subject = applyVariables(input.subject, variables).trim();
