@@ -39,7 +39,10 @@ if "relayBillingToPilotage" in s:
 else:
     # Import, après le dernier import existant.
     lines = s.split("\n")
-    last = max(i for i, l in enumerate(lines) if l.startswith("import "))
+    # Un import peut s'étendre sur plusieurs lignes : on repère la fin réelle
+    # du bloc, sans quoi la nouvelle ligne se glisserait au milieu d'une
+    # déclaration ouverte et la compilation échouerait.
+    last = max(i for i, l in enumerate(lines) if l.startswith("import ") or l.startswith("} from "))
     lines.insert(last + 1, 'import { pilotageDate, relayBillingToPilotage } from "./pilotageBilling";')
     s = "\n".join(lines)
 
