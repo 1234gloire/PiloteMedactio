@@ -122,6 +122,9 @@ export async function receiveBillingEvent(req: Request, res: Response) {
     } else if (status !== "Resilie" && organization.status !== "Client Actif") {
       // Un paiement fait d'un prospect un client : le pipeline doit le refléter.
       await db.update(organizations).set({ status: "Client Actif" }).where(eq(organizations.id, organization.id));
+    } else if (status === "Resilie" && organization.status === "Client Actif") {
+      // Et une résiliation le fait sortir du portefeuille actif.
+      await db.update(organizations).set({ status: "Inactif" }).where(eq(organizations.id, organization.id));
     }
 
     // 2. Le praticien.
@@ -147,21 +150,26 @@ export async function receiveBillingEvent(req: Request, res: Response) {
     }
 
     // 3. L'abonnement, reconnu à son identifiant Stripe.
+    // Un changement de statut ne porte pas toujours le détail du contrat :
+    // seuls les champs réellement transmis sont écrits, afin qu'une mise à
+    // jour partielle n'efface pas le plan ni le tarif déjà connus.
     const seats = input.seats ?? 1;
-    const values = {
+    const values: Partial<typeof subscriptions.$inferInsert> = {
       organizationId: organization.id,
-      planName: input.planName?.trim() || "Abonnement Medactio",
-      seatsPurchased: seats,
-      pricePerSeat: toAmount(Math.round((input.amountCents ?? 0) / seats)),
-      billingCycle: input.interval === "year" ? ("Annuel" as const) : ("Mensuel" as const),
       status,
-      startDate: input.startDate ?? null,
-      renewalDate: input.renewalDate ?? null,
-      cancelledAt: input.cancelledAt ?? null,
-      cancellationReason: input.cancellationReason ?? null,
       stripeCustomerId: input.stripeCustomerId,
       stripeSubscriptionId: input.stripeSubscriptionId ?? null,
     };
+    if (input.planName?.trim()) values.planName = input.planName.trim();
+    if (input.seats) values.seatsPurchased = seats;
+    if (input.amountCents !== null && input.amountCents !== undefined) {
+      values.pricePerSeat = toAmount(Math.round(input.amountCents / seats));
+    }
+    if (input.interval) values.billingCycle = input.interval === "year" ? "Annuel" : "Mensuel";
+    if (input.startDate) values.startDate = input.startDate;
+    if (input.renewalDate) values.renewalDate = input.renewalDate;
+    if (input.cancelledAt) values.cancelledAt = input.cancelledAt;
+    if (input.cancellationReason) values.cancellationReason = input.cancellationReason;
 
     let subscriptionId: number | null = null;
     if (input.stripeSubscriptionId) {
@@ -172,7 +180,12 @@ export async function receiveBillingEvent(req: Request, res: Response) {
         await db.update(subscriptions).set(values).where(eq(subscriptions.id, existing.id));
         subscriptionId = existing.id;
       } else {
-        subscriptionId = (await db.insert(subscriptions).values(values).returning({ id: subscriptions.id }))[0].id;
+        subscriptionId = (
+          await db
+            .insert(subscriptions)
+            .values({ planName: "Abonnement Medactio", ...values, organizationId: organization.id })
+            .returning({ id: subscriptions.id })
+        )[0].id;
       }
     }
 
@@ -212,11 +225,11 @@ export async function receiveBillingEvent(req: Request, res: Response) {
     //    renouvellements n'alertent personne.
     const alert =
       input.event === "customer.subscription.created" || input.event === "checkout.session.completed"
-        ? { message: `Nouvel abonnement — ${label} (${status.toLowerCase()}).`, key: `sub-new-${input.stripeSubscriptionId}` }
+        ? { message: `Nouvel abonnement — ${organization.name} (${status.toLowerCase()}).`, key: `sub-new-${input.stripeSubscriptionId}` }
         : status === "Suspendu"
-          ? { message: `Prélèvement en échec — ${label}. Abonnement suspendu.`, key: `sub-fail-${input.stripeSubscriptionId}-${input.status}` }
+          ? { message: `Prélèvement en échec — ${organization.name}. Abonnement suspendu.`, key: `sub-fail-${input.stripeSubscriptionId}-${input.status}` }
           : status === "Resilie"
-            ? { message: `Résiliation — ${label}.`, key: `sub-cancel-${input.stripeSubscriptionId}` }
+            ? { message: `Résiliation — ${organization.name}.`, key: `sub-cancel-${input.stripeSubscriptionId}` }
             : null;
 
     if (alert) {
