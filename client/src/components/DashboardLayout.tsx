@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, Banknote, BarChart3, BookOpen, Mail, Building2, CalendarDays, ClipboardCheck, Columns3, Download, FileCheck2, FileSpreadsheet, Headphones, HeartPulse, Handshake, Landmark, LayoutDashboard, Lightbulb, LogOut, Megaphone, PanelLeft, ReceiptText, Scale, ShieldCheck, Target, UserRound, UserRoundPlus, Users } from "lucide-react";
+import { Activity, Banknote, BarChart3, BookOpen, Mail, Building2, CalendarDays, ClipboardCheck, Columns3, Download, FileCheck2, FileSpreadsheet, Headphones, HeartPulse, Handshake, Landmark, LayoutDashboard, Lightbulb, LogOut, Megaphone, PanelLeft, ReceiptText, Scale, ShieldCheck, Target, UserRound, UserRoundPlus, Users, Zap } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import LoginScreen from "./LoginScreen";
@@ -66,9 +66,10 @@ const directionItems = [
   { icon: Headphones, label: "Performance Support", path: "/direction/support" },
   { icon: Megaphone, label: "Performance Marketing", path: "/direction/marketing" },
   { icon: Download, label: "Exports", path: "/direction/exports" },
+  { icon: Zap, label: "Automatisations", path: "/direction/automatisations" },
 ];
 
-const directionNavItems = directionItems.filter(item => ["/direction", "/direction/commercial", "/direction/exports"].includes(item.path));
+const directionNavItems = directionItems.filter(item => ["/direction", "/direction/commercial", "/direction/exports", "/direction/automatisations"].includes(item.path));
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
@@ -118,7 +119,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         <p className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Équipe & Produit</p>
         <SidebarMenu>{teamItems.map(item => { const isActive = location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-9 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
         <p className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400 group-data-[collapsible=icon]:hidden">Direction & Analytics</p>
-        <SidebarMenu>{directionNavItems.map(item => { const isActive = item.path === "/direction" ? location === "/direction" : item.path === "/direction/commercial" ? location.startsWith("/direction/") && location !== "/direction/exports" : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.path === "/direction/commercial" ? "Rapports par pôle" : item.label} className="h-9 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.path === "/direction/commercial" ? "Rapports par pôle" : item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
+        <SidebarMenu>{directionNavItems.map(item => { const isActive = item.path === "/direction" ? location === "/direction" : item.path === "/direction/commercial" ? location.startsWith("/direction/") && !["/direction/exports", "/direction/automatisations"].includes(location) : location.startsWith(item.path); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.path === "/direction/commercial" ? "Rapports par pôle" : item.label} className="h-9 text-slate-200 hover:bg-white/8 hover:text-white data-[active=true]:bg-teal-500 data-[active=true]:text-white"><item.icon className="h-4 w-4" /><span>{item.path === "/direction/commercial" ? "Rapports par pôle" : item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-t border-white/10 p-3">
         <DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-white/8"><Avatar className="h-9 w-9 shrink-0 border border-white/10"><AvatarFallback className="bg-white/10 text-xs text-white">{user?.name?.charAt(0).toUpperCase() || "M"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium text-white">{user?.name || "Équipe Medactio"}</p><p className="truncate text-xs text-slate-400">{user?.email || "Compte interne"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-52"><DropdownMenuItem onClick={logout} className="text-destructive"><LogOut className="mr-2 h-4 w-4" />Se déconnecter</DropdownMenuItem></DropdownMenuContent></DropdownMenu>

@@ -10,10 +10,10 @@ import {
   organizations,
   subscriptions,
   supportAlerts,
-  supportAutomations,
   supportTicketEvents,
   supportTickets,
 } from "../drizzle/schema";
+import { getAutomation, setAutomationEnabled } from "./automations.db";
 import { requireDb } from "./db";
 import { sendMail } from "./_core/mailer";
 import { storagePut, storageUrlFor } from "./storage";
@@ -512,18 +512,15 @@ export async function refreshSupportAlerts(referenceDate = new Date()) {
   for (const contract of contractRows.filter(item => item.status === "Actif" && Number(daysUntil(item.endDate, referenceDate)) < 0)) {
     await db.update(establishmentContracts).set({ status: "Expire" }).where(eq(establishmentContracts.id, contract.id));
   }
-  await db.insert(supportAutomations).values({ name: "daily-support-alerts", enabled: false, lastRunAt: referenceDate }).onConflictDoUpdate({ target: supportAutomations.name, set: { lastRunAt: referenceDate } });
   return { alerts: active, processed: ticketRows.length + taskRows.length + invoiceRows.length + contractRows.length + eventRows.length, ranAt: referenceDate };
 }
 
 export async function getSupportAutomation() {
-  const db = await requireDb();
-  return (await db.select().from(supportAutomations).where(eq(supportAutomations.name, "daily-support-alerts")).limit(1))[0] || null;
+  return getAutomation("daily-support-alerts");
 }
 
 /** Voir `setCustomerAutomationEnabled` : la planification est portée par pg_cron. */
 export async function setSupportAutomationEnabled(enabled: boolean) {
-  const db = await requireDb();
-  await db.insert(supportAutomations).values({ name: "daily-support-alerts", enabled }).onConflictDoUpdate({ target: supportAutomations.name, set: { enabled } });
+  await setAutomationEnabled("daily-support-alerts", enabled);
   return { success: true } as const;
 }

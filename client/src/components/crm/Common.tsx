@@ -66,6 +66,7 @@ export const labels: Record<string, string> = {
   "A Risque": "À risque",
   Resolue: "Résolue",
   Ignoree: "Ignorée",
+  "Fin d Essai": "Fin d’essai",
   "Sous Utilisation": "Sous-utilisation",
   "Onboarding Bloque": "Onboarding bloqué",
   "Compte A Risque": "Compte à risque",

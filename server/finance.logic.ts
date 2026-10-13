@@ -474,3 +474,59 @@ export function checkFecBalance(lines: FecLine[]) {
   const credit = roundAmount(lines.reduce((sum, line) => sum + parse(line.Credit), 0));
   return { debit, credit, balanced: Math.abs(debit - credit) < 0.01, entries: lines.length };
 }
+
+/* ------------------------------------------------------------------ */
+/* Relance des impayés                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Au-delà de trois rappels, le dossier relève du recouvrement, pas de l'automatisation. */
+export const MAX_INVOICE_REMINDERS = 3;
+
+/** Délai entre deux rappels, en jours. */
+export const INVOICE_REMINDER_INTERVAL_DAYS = 7;
+
+export type RemindableInvoice = {
+  id: number;
+  status: string;
+  dueDate: string | null;
+  paidAt: string | null;
+  reminderCount: number;
+  lastReminderAt: string | Date | null;
+  nextReminderDate: string | null;
+};
+
+/**
+ * Détermine ce que la relance quotidienne doit traiter.
+ *
+ * Une facture échue change d'abord de statut : « En Retard » est ce que lit
+ * l'équipe, et ce que mesure la trésorerie. Le rappel au client n'est envoyé
+ * qu'ensuite, et seulement si la date de relance est arrivée.
+ *
+ * Un rappel envoyé le jour même bloque tout nouvel envoi : le traitement peut
+ * être rejoué sans écrire deux fois au même établissement.
+ */
+export function planInvoiceReminders(invoices: RemindableInvoice[], now = new Date()) {
+  const today = now.toISOString().slice(0, 10);
+  const toMarkOverdue: number[] = [];
+  const toRemind: number[] = [];
+
+  for (const invoice of invoices) {
+    if (invoice.paidAt) continue;
+    if (invoice.status !== "Envoyee" && invoice.status !== "En Retard") continue;
+
+    const due = toDate(invoice.dueDate);
+    const overdue = Boolean(due && due.toISOString().slice(0, 10) < today);
+    if (!overdue) continue;
+
+    if (invoice.status === "Envoyee") toMarkOverdue.push(invoice.id);
+    if (invoice.reminderCount >= MAX_INVOICE_REMINDERS) continue;
+
+    const last = toDate(invoice.lastReminderAt);
+    if (last && last.toISOString().slice(0, 10) === today) continue;
+    if (invoice.nextReminderDate && invoice.nextReminderDate > today) continue;
+
+    toRemind.push(invoice.id);
+  }
+
+  return { toMarkOverdue, toRemind };
+}

@@ -24,6 +24,7 @@ import SupportTicketDetail from "./pages/SupportTicketDetail";
 import SupportTickets from "./pages/SupportTickets";
 import DirectionDashboard from "./pages/DirectionDashboard";
 import DirectionExports from "./pages/DirectionExports";
+import Automations from "./pages/Automations";
 import DirectionReport from "./pages/DirectionReport";
 import MarketingDashboard from "./pages/MarketingDashboard";
 import MarketingCampaigns from "./pages/MarketingCampaigns";
@@ -84,6 +85,7 @@ function Router() {
     <Route path="/direction/support"><DirectionReport pole="support" /></Route>
     <Route path="/direction/marketing"><DirectionReport pole="marketing" /></Route>
     <Route path="/direction/exports" component={DirectionExports} />
+    <Route path="/direction/automatisations" component={Automations} />
     <Route component={NotFound} />
   </Switch></DashboardLayout>;
 }

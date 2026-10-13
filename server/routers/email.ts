@@ -3,6 +3,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import * as emailDb from "../email.db";
+import { knowledgeCategories } from "../../drizzle/schema";
 import { isMailConfigured } from "../_core/mailer";
 
 type Ctx = { user: NonNullable<Parameters<typeof db.ensureInternalProfile>[0]> };
@@ -22,7 +23,9 @@ async function requireWriter(ctx: Ctx) {
   return profile;
 }
 
-const categories = ["Commercial", "Support", "Marketing", "Facturation", "General"] as const;
+// Les modèles suivent le classement des procédures, pour éviter deux
+// taxonomies concurrentes.
+const categories = knowledgeCategories;
 
 const recipientInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("contact"), id: z.number().int().positive() }),
@@ -45,7 +48,7 @@ export const emailRouter = router({
     create: protectedProcedure
       .input(z.object({
         name: z.string().trim().min(2).max(160),
-        category: z.enum(categories).default("General"),
+        category: z.enum(categories).default("INT"),
         subject: z.string().trim().min(2).max(240),
         body: z.string().trim().min(10).max(20_000),
       }))

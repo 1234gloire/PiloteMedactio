@@ -409,6 +409,7 @@ export const customerAlerts = pgTable(
     }),
     type: varchar("type", { length: 48, enum: [
       "Renouvellement",
+      "Fin d Essai",
       "Sous Utilisation",
       "Onboarding Bloque",
       "Compte A Risque",
@@ -432,16 +433,6 @@ export const customerAlerts = pgTable(
     index("customer_alerts_status_due_idx").on(table.status, table.dueDate),
   ]
 );
-
-export const customerSuccessAutomations = pgTable("customer_success_automations", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar("name", { length: 120 }).notNull().unique(),
-  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
-  enabled: boolean("enabled").default(false).notNull(),
-  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
-});
 
 export const invoices = pgTable("invoices", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -597,16 +588,6 @@ export const supportAlerts = pgTable("support_alerts", {
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("support_alerts_status_due_idx").on(table.status, table.dueAt)]);
 
-export const supportAutomations = pgTable("support_automations", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar("name", { length: 120 }).notNull().unique(),
-  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
-  enabled: boolean("enabled").default(false).notNull(),
-  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
-});
-
 export const usageLogs = pgTable("usage_logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   organizationId: integer("organizationId")
@@ -624,11 +605,54 @@ export const usageLogs = pgTable("usage_logs", {
  * Le corps accepte des variables remplacées à l'ouverture du modèle :
  * {{contact}}, {{etablissement}}, {{expediteur}}, {{poste}}.
  */
+/**
+ * Traitements planifiés de la plateforme.
+ *
+ * La planification est portée par `pg_cron` côté Supabase : le déclenchement
+ * a toujours lieu à heure fixe, et c'est `enabled` qui décide si le calcul
+ * est réellement exécuté. Un seul registre pour tous les pôles, afin que la
+ * direction voie d'un coup d'œil ce qui tourne — et qu'ajouter un traitement
+ * ne demande plus de nouvelle table.
+ */
+export const automationKeys = [
+  "daily-customer-success-alerts",
+  "daily-support-alerts",
+  "daily-invoice-reminders",
+  "daily-governance-watch",
+] as const;
+
+export const automations = pgTable("automations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  key: varchar("key", { length: 64, enum: automationKeys }).notNull().unique(),
+  enabled: boolean("enabled").default(false).notNull(),
+  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
+  // Dernier résultat connu : la direction doit pouvoir constater un échec
+  // sans ouvrir les journaux du serveur.
+  lastStatus: varchar("lastStatus", { length: 16, enum: ["Succes", "Echec"] }),
+  lastDetail: text("lastDetail"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+});
+
+export const knowledgeCategories = [
+  "ACH",
+  "ACT",
+  "COM",
+  "CONF",
+  "CSM",
+  "DIR",
+  "INT",
+  "MKT",
+  "PROD",
+  "SUP",
+] as const;
+
 export const emailTemplates = pgTable("email_templates", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 160 }).notNull(),
-  category: varchar("category", { length: 32, enum: ["Commercial", "Support", "Marketing", "Facturation", "General"] })
-    .default("General")
+  // Même classement que la base de connaissances : une seule liste à tenir.
+  category: varchar("category", { length: 32, enum: knowledgeCategories })
+    .default("INT")
     .notNull(),
   subject: varchar("subject", { length: 240 }).notNull(),
   body: text("body").notNull(),
@@ -779,18 +803,6 @@ export const changelogEntries = pgTable("changelog_entries", {
  * Catégories reprises de l'arborescence des procédures de Medactio, afin que
  * la base de connaissances suive le classement déjà utilisé par l'équipe.
  */
-export const knowledgeCategories = [
-  "ACH",
-  "ACT",
-  "COM",
-  "CONF",
-  "CSM",
-  "DIR",
-  "INT",
-  "MKT",
-  "PROD",
-  "SUP",
-] as const;
 
 export const knowledgeBaseArticles = pgTable("knowledge_base_articles", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -828,3 +840,4 @@ export type AdminTask = typeof adminTasks.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type EstablishmentContract = typeof establishmentContracts.$inferSelect;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type Automation = typeof automations.$inferSelect;

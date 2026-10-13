@@ -5,8 +5,12 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerFileRoutes } from "./fileRoutes";
 import { appRouter } from "../routers";
-import { runCustomerSuccessAlerts } from "../customer-success.scheduler";
-import { runSupportAlerts } from "../support.scheduler";
+import {
+  runCustomerSuccessAlerts,
+  runGovernanceWatch,
+  runInvoiceRemindersRoute,
+  runSupportAlerts,
+} from "../automations.scheduler";
 import { applyLeadCaptureCors, captureMarketingLead } from "../marketing.capture";
 import { openSupportTicket } from "../support.intake";
 import { receiveBillingEvent } from "../billing.intake";
@@ -39,8 +43,11 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerFileRoutes(app);
+  // Traitements quotidiens déclenchés par pg_cron (voir automations.db.ts).
   app.post("/api/scheduled/customer-success-alerts", runCustomerSuccessAlerts);
   app.post("/api/scheduled/support-alerts", runSupportAlerts);
+  app.post("/api/scheduled/invoice-reminders", runInvoiceRemindersRoute);
+  app.post("/api/scheduled/governance-watch", runGovernanceWatch);
   app.options("/api/public/marketing/leads", (req, res) => { applyLeadCaptureCors(req, res); res.sendStatus(204); });
   app.post("/api/public/marketing/leads", captureMarketingLead);
   // Ouverture de ticket depuis le produit Medactio (serveur à serveur).

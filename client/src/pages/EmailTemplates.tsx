@@ -11,23 +11,30 @@ import { Loader2, Mail, MailPlus, Pencil, Trash2 } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-const categories = ["Commercial", "Support", "Marketing", "Facturation", "General"] as const;
+const categories = ["ACH", "ACT", "COM", "CONF", "CSM", "DIR", "INT", "MKT", "PROD", "SUP"] as const;
 const fieldClass = "h-10 rounded-lg border-slate-200 bg-white focus:border-teal-600";
 const selectClass = "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/15";
 
+// Mêmes teintes que la base de connaissances, pour que l'œil retrouve ses
+// repères d'un écran à l'autre.
 const tone: Record<string, string> = {
-  Commercial: "bg-teal-50 text-teal-700",
-  Support: "bg-sky-50 text-sky-700",
-  Marketing: "bg-violet-50 text-violet-700",
-  Facturation: "bg-emerald-50 text-emerald-700",
-  General: "bg-slate-100 text-slate-600",
+  COM: "bg-teal-50 text-teal-700",
+  CSM: "bg-teal-50 text-teal-700",
+  SUP: "bg-sky-50 text-sky-700",
+  ACT: "bg-sky-50 text-sky-700",
+  MKT: "bg-violet-50 text-violet-700",
+  PROD: "bg-violet-50 text-violet-700",
+  CONF: "bg-amber-50 text-amber-800",
+  ACH: "bg-amber-50 text-amber-800",
+  DIR: "bg-[#123653]/8 text-[#123653]",
+  INT: "bg-slate-100 text-slate-600",
 };
 
 function TemplateDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChange: (v: boolean) => void; initial?: any }) {
   const utils = trpc.useUtils();
   const [form, setForm] = useState({
     name: initial?.name || "",
-    category: initial?.category || "Commercial",
+    category: initial?.category || "INT",
     subject: initial?.subject || "",
     body: initial?.body || "",
   });

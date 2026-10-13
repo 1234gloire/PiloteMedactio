@@ -40,4 +40,21 @@ describe("buildCustomerAlertCandidates", () => {
     expect(new Set(alerts.map(alert => alert.dedupeKey)).size).toBe(4);
     expect(alerts[0]?.severity).toBe("Critique");
   });
+
+  it("annonce la fin d'essai plutôt qu'un renouvellement de contrat", () => {
+    const alerts = buildCustomerAlertCandidates({ organizationId: 7, organizationName: "Dr Martin", subscriptionId: 12, subscriptionStatus: "Essai", renewalDate: "2026-10-02", daysUntilRenewal: 2, documentsLast30: 40, healthLabel: "Bon", healthScore: 80, onboardingProgress: 100 });
+    expect(alerts.map(alert => alert.type)).toEqual(["Fin d Essai"]);
+    expect(alerts[0]?.severity).toBe("Critique");
+    expect(alerts[0]?.dedupeKey).toBe("trial:12:2026-10-02");
+  });
+
+  it("n'alerte pas sur un essai dont le terme reste lointain", () => {
+    const alerts = buildCustomerAlertCandidates({ organizationId: 7, organizationName: "Dr Martin", subscriptionId: 12, subscriptionStatus: "Essai", renewalDate: "2026-11-15", daysUntilRenewal: 45, documentsLast30: 40, healthLabel: "Bon", healthScore: 80, onboardingProgress: 100 });
+    expect(alerts).toEqual([]);
+  });
+
+  it("conserve l'alerte de renouvellement pour un abonnement actif", () => {
+    const alerts = buildCustomerAlertCandidates({ organizationId: 7, organizationName: "CH Nord", subscriptionId: 12, subscriptionStatus: "Actif", renewalDate: "2026-10-02", daysUntilRenewal: 2, documentsLast30: 40, healthLabel: "Bon", healthScore: 80, onboardingProgress: 100 });
+    expect(alerts.map(alert => alert.type)).toEqual(["Renouvellement"]);
+  });
 });
