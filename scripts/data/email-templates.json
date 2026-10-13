@@ -1,0 +1,570 @@
+[
+  {
+    "category": "MKT",
+    "name": "MKT-01 — Réponse à une demande d'information",
+    "subject": "Votre question sur MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci pour votre message. [Réponse précise à la question, en reprenant uniquement les messages validés.]\n\nSi vous le souhaitez, nous pouvons vous présenter MEDACTIO lors d'une démonstration de 30 minutes en visioconférence : https://calendly.com/roland-mafouta-medactio/30min.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "MKT",
+    "name": "MKT-01 — Réponse à un contact hors cible",
+    "subject": "Votre demande concernant MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci de votre intérêt pour MEDACTIO. Notre solution est réservée aux professionnels de santé inscrits (RPPS/ADELI), aux praticiens associés (PADHUE), aux stagiaires associés et aux internes. Nous ne sommes donc pas en mesure de donner suite à votre demande.\n\nNous restons à votre disposition si votre situation évolue.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "MKT",
+    "name": "MKT-02 — Prospection praticien (offre Praticien)",
+    "subject": "Gagner du temps sur vos lettres de sortie",
+    "body": "Bonjour {{contact}},\n\nMEDACTIO est une solution d'aide à la rédaction des écrits hospitaliers : courrier de sortie, correspondance médicale, conciliation médicamenteuse et observation médicale. Vous restez l'auteur de vos écrits : vous relisez, corrigez et validez chaque document.\n\nMEDACTIO ne stocke aucune donnée de santé de patients et les identifiants directs sont pseudonymisés avant toute transmission au moteur d'IA. L'abonnement est de 32 € HT par mois, avec une période d'essai de 7 jours.\n\nSouhaitez-vous une démonstration de 30 minutes ? https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}\n\nVous recevez ce message en tant que professionnel de santé. Pour ne plus en recevoir : [lien de désinscription] ou contact@medactio.fr. Grays & Co, 229 rue Solférino, 59000 Lille.",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "MKT",
+    "name": "MKT-02 — Prospection établissement (DIM, DSI/DPO, direction)",
+    "subject": "Écrits hospitaliers : une aide à la rédaction sans intégration à votre SI",
+    "body": "Bonjour {{contact}},\n\nMEDACTIO aide vos praticiens à rédiger lettres de sortie, correspondance médicale, conciliation médicamenteuse et observations. La solution est hébergée chez OVH, hébergeur certifié HDS, ne stocke aucune donnée de santé de patients et ne nécessite aucune intégration à votre système d'information.\n\nJe vous propose une présentation de 30 minutes adaptée à votre rôle : https://calendly.com/roland-mafouta-medactio/30min. Un dossier de conformité peut vous être transmis sur demande.\n\nBien cordialement,\n{{expediteur}}\n\nPour ne plus recevoir nos messages : [lien de désinscription] ou contact@medactio.fr. Grays & Co, 229 rue Solférino, 59000 Lille.",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "MKT",
+    "name": "MKT-03 — Accord de témoignage",
+    "subject": "Votre témoignage sur MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous vous proposons de publier le texte suivant : « [texte du témoignage] ». Merci de répondre « Je valide » pour autoriser sa publication sur [canal], avec la mention de votre nom, fonction et établissement. Vous pouvez retirer cet accord à tout moment en écrivant à contact@medactio.fr.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "MKT",
+    "name": "MKT-04 — Suivi après un salon",
+    "subject": "Suite à notre rencontre au [événement]",
+    "body": "Bonjour {{contact}},\n\nMerci pour notre échange au [événement]. Comme convenu, voici le lien pour planifier une démonstration de 30 minutes : https://calendly.com/roland-mafouta-medactio/30min. [Document convenu en pièce jointe.]\n\nSi vous ne souhaitez plus être contacté(e), répondez simplement à ce message.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "MKT",
+    "name": "MKT-05 — Invitation à devenir ambassadeur",
+    "subject": "Une invitation à rejoindre le cercle des médecins ambassadeurs MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVotre usage de MEDACTIO et vos retours nous sont précieux. Nous constituons un petit cercle de médecins ambassadeurs, dans un cadre transparent défini par une charte. Seriez-vous disponible pour en discuter 15 minutes ? https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-01 — Premier contact direction",
+    "subject": "MEDACTIO : conformité, certification et indicateurs de qualité, un appui pour la qualité des écrits hospitaliers",
+    "body": "Bonjour {{contact}},\n\nJe me permets de vous écrire au nom de Grays & Co, éditeur de MEDACTIO, une solution d'aide à la rédaction des écrits hospitaliers (lettres de sortie, correspondance médicale, conciliation médicamenteuse, observations).\n\nLa qualité des écrits compte dans la dotation d'incitation financière à la qualité (IFAQ, article L. 162-23-15 du code de la sécurité sociale ; arrêté du 15 janvier 2026), qui s'appuie notamment sur :\n\n– la certification HAS de l'établissement, premier indicateur du dispositif ;\n\n– la qualité de la lettre de liaison de sortie, indicateur HAS pour les séjours MCO de plus de 24 heures, la chirurgie ambulatoire, le SMR et la psychiatrie.\n\nMEDACTIO accompagne vos praticiens vers des documents plus complets et plus homogènes, dans un cadre conforme : hébergement chez OVH, hébergeur certifié HDS ; aucun stockage de données de santé de patients ; identifiants directs pseudonymisés avant toute transmission au moteur d'IA ; aucune intégration à votre système d'information. Le praticien reste l'auteur et valide chaque document.\n\nJ'aurais grand plaisir à vous présenter l'intérêt de MEDACTIO pour votre établissement lors d'un échange de 30 minutes, cette semaine ou la suivante. La démonstration ne dépasse pas 30 minutes. Si le sujet relève plutôt de l'un de vos collègues (DIM, DSI, présidence de la CME), je vous remercie par avance de bien vouloir m'orienter.\n\nVous pouvez réserver directement une réunion MEDACTIO : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-01 — Premier contact DSI / DPO",
+    "subject": "MEDACTIO, hébergement HDS, pseudonymisation sans intégration au SI",
+    "body": "Bonjour {{contact}},\n\nJe me permets de vous écrire au nom de Grays & Co, éditeur de MEDACTIO, une solution d'aide à la rédaction des écrits hospitaliers par IA. [Contexte : le Dr X de votre établissement / la direction nous a signalé votre rôle dans l'étude de ce type d'outil.]\n\nCe que MEDACTIO apporte à l'établissement :\n\n– une aide concrète pour vos praticiens dans la rédaction de leurs écrits ;\n\n– des documents plus uniformes d'un service à l'autre ;\n\n– un gain de qualité, le praticien relisant et validant chaque document.\n\nCe qui concerne directement votre périmètre :\n\n– hébergement chez OVH, hébergeur certifié HDS ;\n\n– aucun stockage de données de santé de patients par MEDACTIO ;\n\n– identifiants directs pseudonymisés avant toute transmission au moteur d'IA ;\n\n– aucune intégration à votre SI, donc pas de recette technique.\n\nJe vous adresserai volontiers notre documentation de conformité et resterai à votre disposition pour échanger 30 minutes et répondre à toutes vos questions. La démonstration ne dépasse pas 30 minutes.\n\nVous pouvez réserver directement une réunion MEDACTIO : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-01 — Premier contact médical",
+    "subject": "MEDACTIO, gain de temps sur les courriers, la conciliation médicamenteuse et le suivi journalier",
+    "body": "Bonjour {{contact}},\n\nJe me permets de vous écrire au sujet de la charge de rédaction des écrits dans [votre service / votre pôle / votre établissement]. MEDACTIO, éditée par Grays & Co, accompagne les praticiens dans la rédaction des lettres de sortie, de la correspondance médicale, de la conciliation médicamenteuse et des observations.\n\nVous restez l'auteur de chaque document : vous le relisez, le corrigez et le validez. Les identifiants directs sont pseudonymisés avant toute transmission au moteur d'IA, et aucune donnée de santé de patients n'est stockée par MEDACTIO.\n\nCe serait un plaisir de vous présenter MEDACTIO en visioconférence, cette semaine ou la suivante, avec ou sans vos collègues. La démonstration ne dépasse pas 30 minutes.\n\nVous pouvez réserver directement une réunion MEDACTIO : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-01 — Premier contact qualité",
+    "subject": "MEDACTIO : qualité et homogénéité des écrits hospitaliers, un appui pour la certification et les indicateurs de qualité",
+    "body": "Bonjour {{contact}},\n\nJe me permets de vous écrire au nom de Grays & Co, éditeur de MEDACTIO, une solution d'aide à la rédaction des écrits hospitaliers (lettres de sortie, correspondance médicale, conciliation médicamenteuse, observations médicales).\n\nLa qualité des écrits compte dans la certification HAS comme dans les indicateurs de qualité et de sécurité des soins, notamment la qualité de la lettre de liaison de sortie, pris en compte dans la dotation d'incitation financière à la qualité (IFAQ). MEDACTIO apporte à votre établissement :\n\n– une aide à la rédaction pour vos praticiens ;\n\n– des documents plus uniformes d'un service à l'autre ;\n\n– un gain de qualité, chaque document étant relu et validé par le praticien, qui reste l'auteur.\n\nSur le plan de la conformité : hébergement chez OVH, hébergeur certifié HDS ; aucun stockage de données de santé de patients ; identifiants directs pseudonymisés avant toute transmission au moteur d'IA ; aucune intégration à votre système d'information.\n\nPourrions-nous échanger 30 minutes, cette semaine ou la suivante, pour évaluer ensemble l'intérêt de MEDACTIO pour vos démarches qualité ? La démonstration ne dépasse pas 30 minutes. Je vous serais également reconnaissant de m'indiquer les interlocuteurs à associer (CME, DIM).\n\nVous pouvez réserver directement une réunion MEDACTIO : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-02 — Proposition de créneaux",
+    "subject": "Prenons rendez-vous pour présenter MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVoici le lien pour réserver une réunion MEDACTIO de 30 minutes : https://calendly.com/roland-mafouta-medactio/30min.\n\nNous serons heureux de vous présenter notre solution d’écriture hospitalière.\n\nA très bientôt.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-02 — Confirmation",
+    "subject": "Confirmation de notre rendez-vous du [date] à [heure]",
+    "body": "Bonjour {{contact}},\n\nNotre rendez-vous de 30 minutes aura lieu le [date] à [heure, heure de Paris]. Lien de connexion : [lien Zoom]. N'hésitez pas à inviter les personnes concernées ([DIM, DSI/DPO, direction, direction qualité, CME]).\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-02 — Rappel de la veille",
+    "subject": "Rappel : rendez-vous MEDACTIO demain à [heure]",
+    "body": "Bonjour {{contact}},\n\nJe vous rappelle notre rendez-vous de demain à [heure] : [lien Zoom]. Si vous devez le décaler, répondez simplement à ce message.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-02 — Nouveau créneau",
+    "subject": "Reprogrammation de notre rendez-vous",
+    "body": "Bonjour {{contact}},\n\nNous n'avons pas pu nous retrouver. Voici le lien pour reprogrammer une réunion MEDACTIO de 30 minutes : https://calendly.com/roland-mafouta-medactio/30min.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-03 — Accusé de réception",
+    "subject": "Votre demande de démonstration MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci de l'intérêt que vous portez à MEDACTIO. Nous serons heureux de vous présenter la solution lors d'une démonstration de 30 minutes en visioconférence.\n\nVous pouvez planifier dès maintenant votre réunion MEDACTIO : https://calendly.com/roland-mafouta-medactio/30min\n\nAfin d'adapter la présentation à vos besoins, pourriez-vous nous indiquer votre service et les écrits sur lesquels vous souhaitez gagner du temps (courrier de sortie, correspondance médicale, conciliation médicamenteuse, observation médicale) ?\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-03 — Relance empathique (créneau non réservé ou rendez-vous manqué)",
+    "subject": "Votre démonstration MEDACTIO : nous restons à votre disposition",
+    "body": "Bonjour {{contact}},\n\nJe sais combien votre emploi du temps est chargé, et je ne voudrais surtout pas vous importuner. Je me permets simplement de revenir vers vous au sujet de votre demande de démonstration.\n\nSi le moment est plus favorable, vous pouvez planifier une réunion MEDACTIO à votre convenance (la démonstration ne dépasse pas 30 minutes) : https://calendly.com/roland-mafouta-medactio/30min\n\nSi vous préférez un échange téléphonique, indiquez-moi simplement l'horaire qui vous arrange et je vous appellerai.\n\nEt si ce projet n'est plus d'actualité, un mot de votre part suffira : je clôturerai alors votre demande, sans aucune difficulté.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-03 — Récapitulatif après démonstration (offre Praticien)",
+    "subject": "Suite à notre démonstration : démarrez votre période d'essai de 7 jours",
+    "body": "Bonjour {{contact}},\n\nMerci pour le temps que vous nous avez consacré aujourd'hui.\n\nComme convenu, vous pouvez démarrer votre période d'essai de 7 jours directement sur la plateforme (www.medactio.fr). Un moyen de paiement est enregistré à l'inscription, mais aucun débit n'intervient pendant l'essai. Le premier prélèvement (32 € HT par mois) n'a lieu qu'après le 7e jour, et l'abonnement mensuel est résiliable à tout moment.\n\nJe reste à votre disposition pour toute question.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-03 — Récapitulatif après démonstration (offre Établissement : convention de prise en main)",
+    "subject": "Suite à notre démonstration : proposition de convention de prise en main de MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci pour l'échange du [date].\n\nAfin que vos équipes puissent éprouver MEDACTIO en conditions réelles, nous vous proposons une convention de prise en main : mise à disposition de la solution à titre gracieux pendant un mois, pour un à deux services hospitaliers au maximum. Pour préparer cette convention, pourriez-vous nous indiquer le ou les services concernés et le nombre de praticiens utilisateurs ?\n\nNous vous adresserons le projet de convention sous 4 jours ouvrés. Pour mémoire, MEDACTIO ne nécessite aucune intégration à votre système d'information, et le praticien reste l'auteur de chaque document.\n\nJe reste à votre disposition pour toute question.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-04 — Aide à la prise en main (J+2)",
+    "subject": "Votre essai MEDACTIO : besoin d'un coup de main ?",
+    "body": "Bonjour {{contact}},\n\nVotre période d'essai de 7 jours a commencé. Pour vous aider à démarrer, n’hésitez pas à consulter le mode d’emploi associé à votre tableau de bord et les vidéos explicatives. Pour toute question, écrivez-nous à contact@medactio.fr ou directement depuis medactio (tableau de bord/besoin d’aide ?).\n\nRappel : vous restez l'auteur de vos écrits et validez chaque document produit. Téléchargez-le dès qu'il est généré : MEDACTIO ne conserve aucun contenu.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-04 — Rappel de fin d'essai (J+5)",
+    "subject": "Votre période d'essai MEDACTIO se termine dans 48h",
+    "body": "Bonjour {{contact}},\n\nVotre période d'essai de 7 jours se termine le [date]. Sans résiliation de votre part, le premier prélèvement de 38,40 € TTC (32 € HT) interviendra après cette date, puis chaque mois. L'abonnement est résiliable à tout moment directement dans vos paramètres de compte. Aucun débit n'est effectué si vous résiliez avant la fin de l'essai.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-04 — Confirmation de résiliation pendant l'essai",
+    "subject": "Confirmation de votre résiliation MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous confirmons la résiliation de votre abonnement. Aucun débit n'a été ni ne sera effectué. Merci d'avoir essayé MEDACTIO ; vos retours sont les bienvenus à contact@medactio.fr.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-04 — Confirmation de l'abonnement",
+    "subject": "Votre abonnement MEDACTIO est actif",
+    "body": "Bonjour {{contact}},\n\nVotre abonnement est actif ; le premier prélèvement de 38,40 € TTC (32 € HT) a été effectué. Il est mensuel et résiliable à tout moment. Pour toute question : contact@medactio.fr.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-05 — Relance après démonstration",
+    "subject": "Suite à notre démonstration MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous revenons vers vous après notre démonstration, en espérant qu'elle vous a été utile. Avez-vous eu l'occasion d'en discuter avec vos collègues ou votre direction ?\n\nNous restons à votre disposition pour répondre à vos questions, ou pour présenter MEDACTIO à d'autres personnes de votre équipe. Vous pouvez planifier une réunion MEDACTIO de 30 minutes à votre convenance : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": "deal:Demo Effectuee",
+    "delayDays": 3
+  },
+  {
+    "category": "COM",
+    "name": "COM-05 — Relance après devis",
+    "subject": "Votre devis MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous nous permettons de revenir vers vous au sujet du devis que nous vous avons adressé. Souhaitez-vous que nous en parlions ensemble, ou avez-vous besoin d'informations complémentaires (conformité, déploiement) ?\n\nNous serions heureux d'en échanger avec vous lors d'un rendez-vous de 30 minutes : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": "deal:Devis Envoye",
+    "delayDays": 7
+  },
+  {
+    "category": "COM",
+    "name": "COM-05 — Relance après absence de réponse",
+    "subject": "Votre intérêt pour MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous nous permettons de revenir vers vous au sujet de MEDACTIO, conscients que votre emploi du temps est chargé. Si le sujet vous intéresse toujours, vous pouvez réserver un échange à l'horaire qui vous convient. La démonstration ne dépasse pas 30 minutes.\n\nVous pouvez réserver directement une réunion MEDACTIO : https://calendly.com/roland-mafouta-medactio/30min\n\nSi le moment n'est pas opportun, un simple mot de votre part nous suffira.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-05 — Clôture",
+    "subject": "Nous clôturons votre dossier MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nSans retour de votre part, nous considérons que le sujet n'est pas d'actualité et nous clôturons votre dossier. Si votre projet redevient d'actualité, nous restons à votre écoute : vous pouvez nous écrire à tout moment à contact@medactio.fr.\n\nVous pouvez aussi réserver directement une réunion MEDACTIO de 30 minutes : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "COM",
+    "name": "COM-06 — Envoi du devis",
+    "subject": "Votre proposition MEDACTIO pour {{etablissement}}",
+    "body": "Bonjour {{contact}},\n\nComme convenu, vous trouverez ci-joint notre proposition pour [services concernés], accompagnée des CGV, des CGU. Elle est valable un mois à partir de la date de réception.\n\nJe reste disponible pour un appel de 30 minutes pour la présenter et répondre à vos questions éventuelles : https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACH",
+    "name": "ACH-01 — Question à l'acheteur",
+    "subject": "[Référence du marché] — demande de précisions",
+    "body": "Bonjour,\n\nDans le cadre de la consultation [référence], nous souhaitons préciser le point suivant du cahier des charges (article [X]) : [question].\n\nCordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACH",
+    "name": "ACH-02 — Prise de contact avec une centrale",
+    "subject": "Candidature de MEDACTIO au référencement — [centrale]",
+    "body": "Bonjour,\n\nGrays & Co édite MEDACTIO, solution d'aide à la rédaction des écrits hospitaliers, hébergée chez OVH (hébergeur certifié HDS). Nous souhaitons connaître les conditions et le calendrier de référencement. Pourriez-vous nous orienter vers le bon interlocuteur ?\n\nCordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACH",
+    "name": "ACH-03 — Envoi du dossier contractuel",
+    "subject": "Dossier contractuel MEDACTIO — {{etablissement}}",
+    "body": "Bonjour {{contact}},\n\nMerci pour votre accord. Vous trouverez ci-joint le dossier contractuel : [devis / contrat], CGV et CGU. Merci de nous retourner l'exemplaire signé avant le [date].\n\nDès réception, nous lancerons la création des comptes de vos praticiens.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACH",
+    "name": "ACH-04 — Échec de prélèvement (offre Praticien)",
+    "subject": "Votre paiement MEDACTIO n'a pas pu être effectué",
+    "body": "Bonjour {{contact}},\n\nLe prélèvement de votre abonnement du [date] n'a pas pu être effectué. Vous pouvez mettre à jour votre moyen de paiement ici : [lien]. Si besoin, contactez-nous à contact@medactio.fr.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACH",
+    "name": "ACH-04 — Relance de facture impayée (établissement)",
+    "subject": "Facture n° [numéro] du [date] — échéance dépassée",
+    "body": "Bonjour {{contact}},\n\nSauf erreur de notre part, la facture n° [numéro] d'un montant de [montant] TTC, échue le [date], n'a pas été réglée. Pouvez-vous nous indiquer sa date de paiement ? [Pour Chorus Pro : numéro de dépôt].\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACT",
+    "name": "ACT-01 — Demande de liste d'utilisateurs",
+    "subject": "Création des comptes MEDACTIO — liste de vos praticiens",
+    "body": "Bonjour {{contact}},\n\nNous allons créer les comptes de vos praticiens. Merci de bien vouloir nous transmettre pour chaque praticien : nom, prénom, email professionnel, numéro RPPS ou ADELI (ou statut), service. Nous vous confirmerons la création sous 2 jours ouvrés.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACT",
+    "name": "ACT-01 — Lien de connexion",
+    "subject": "Votre accès à MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVotre compte MEDACTIO a été créé par {{etablissement}}. Voici vos identifiants de connexion.\n\nVotre compte ainsi que ses identifiants sont personnels : merci de ne pas le partager.\n\nUn mode d’emploi ainsi que des tutoriels sont intégrés à l’application pour faciliter la prise en main. Vous pouvez nous contacter via le bouton « Besoin d’aide » en cas de difficulté ou de question liée à l’utilisation de la plateforme.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACT",
+    "name": "ACT-01 — Confirmation au référent",
+    "subject": "Comptes MEDACTIO créés — {{etablissement}}",
+    "body": "Bonjour {{contact}},\n\nLes comptes Medactio ont été créés et les paramètres de connexion envoyés aux praticiens concernés. Les instructions liées à l’utilisation de la solution ont été fournies.\n\nVous pouvez suivre les comptes utilisateurs depuis votre compte réfèrent.\n\nNous restons disponibles et à l’écoute en cas de besoin.\n\nNous espérons que Medactio sera d’une grande utilité pour vos praticiens.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACT",
+    "name": "ACT-02 — Invitation à la session de lancement",
+    "subject": "Session de lancement MEDACTIO — [date] à [heure]",
+    "body": "Bonjour {{contact}},\n\nVotre établissement a activé MEDACTIO. Nous vous invitons à une session de lancement de 45 minutes le [date] à [heure] : [lien Zoom].\n\nPrérequis : un compte actif et un poste connecté. Aucun document réel n'est nécessaire.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "ACT",
+    "name": "ACT-02 — Récapitulatif après la session",
+    "subject": "Merci pour votre participation — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci pour votre participation. Vous trouverez ci-joint les supports et la FAQ.\n\nRappel : vous relisez et validez chaque document, et vous le téléchargez dès sa production. Pour toute question : contact@medactio.fr.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-01 — Accusé de réception",
+    "subject": "Votre demande {{numero}} — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous avons bien reçu votre demande et revenons vers vous rapidement. Pour faciliter le traitement, merci de ne pas joindre de données de patients.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": "ticket:En cours",
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-01 — Données de patients reçues",
+    "subject": "Votre demande {{numero}} — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVotre message contenait des informations de patients. Nous ne les avons pas exploitées et l'avons supprimé. Merci de décrire le problème sans données patients ; nous restons à votre disposition.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-02 — Réponse à une question d'usage",
+    "subject": "Votre question {{numero}} — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nPour [objet de la question], voici la marche à suivre : [étapes]. Vous trouverez aussi ce point dans notre FAQ : [lien].\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-03 — Escalade au prestataire",
+    "subject": "[CRITIQUE / MAJEUR / MINEUR] — Incident MEDACTIO {{numero}}",
+    "body": "Bonjour,\n\nIncident signalé le [date, heure] par {{etablissement}}. Description : [symptômes]. Étapes pour reproduire : [étapes]. Impact : [nombre d'utilisateurs]. Aucune donnée de patient n'est jointe. Merci de confirmer la prise en charge et une première analyse avant [heure].\n\nCordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-03 — Information du client",
+    "subject": "Votre signalement {{numero}} — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous avons bien pris en charge l'incident que vous nous avez signalé et l'avons transmis à notre équipe technique. Nous reviendrons vers vous avant [heure / date] avec un point d'avancement.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-04 — Avis de maintenance",
+    "subject": "Maintenance programmée de MEDACTIO le [date]",
+    "body": "Bonjour,\n\nUne maintenance aura lieu le [date] de [heure] à [heure]. Pendant cette période, [fonctions touchées] pourra être indisponible. Nous ferons une communication à la fin de la maintenance.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-04 — Pendant l'interruption",
+    "subject": "Interruption de service MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nLe service est actuellement interrompu. Notre équipe technique travaille à son rétablissement ; nous vous tiendrons informé(e) avant [heure].\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP-04 — Retour à la normale",
+    "subject": "MEDACTIO est de nouveau disponible",
+    "body": "Bonjour,\n\nLe service est rétabli depuis [heure]. Merci de votre patience ; n'hésitez pas à nous écrire à contact@medactio.fr en cas de difficulté.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "SUP",
+    "name": "SUP — Demande traitée (clôture du ticket)",
+    "subject": "Votre demande {{numero}} a été traitée — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVotre demande d’assistance « {{ticket}} » vient d’être traitée par notre équipe.\n\nSi le problème persiste ou si la réponse ne vous paraît pas complète, répondez simplement à cet email : nous rouvrirons votre demande.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": "ticket:Resolu",
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-01 — Point d'adoption avec le référent",
+    "subject": "Point sur l'utilisation de MEDACTIO dans votre établissement",
+    "body": "Bonjour {{contact}},\n\nNous faisons un point régulier sur l'utilisation de MEDACTIO. Il apparaît que [service] se connecte moins que prévu. Avez-vous identifié des freins ? Nous pouvons proposer une courte session de rappel ou une ressource ciblée.\n\nSeriez-vous disponible pour 15 minutes ? https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-02 — Questionnaire de satisfaction",
+    "subject": "Votre avis sur MEDACTIO (2 minutes)",
+    "body": "Bonjour {{contact}},\n\nVotre avis nous aide à améliorer MEDACTIO. Quatre questions, deux minutes : [lien]. Merci de ne mentionner aucune information de patient.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-02 — Rappel d'un détracteur",
+    "subject": "Votre retour sur MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci pour votre retour sincère. Nous aimerions mieux comprendre ce qui ne vous convient pas. Avez-vous 10 minutes cette semaine ? https://calendly.com/roland-mafouta-medactio/30min\n\nVous pouvez aussi simplement répondre à ce courriel.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-02 — Proposition de témoignage",
+    "subject": "Merci pour votre retour",
+    "body": "Bonjour {{contact}},\n\nVotre retour est très positif. Accepteriez-vous de nous en dire plus, sous la forme d'un court témoignage que vous relirez et validerez avant toute publication ?\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-03 — Ouverture du renouvellement",
+    "subject": "Renouvellement de votre contrat MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVotre contrat arrive à échéance le [date]. Nous souhaiterions faire le point avec vous sur l'utilisation de MEDACTIO et les conditions de renouvellement. Seriez-vous disponible ? https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-03 — Confirmation de résiliation (offre Praticien)",
+    "subject": "Confirmation de votre résiliation MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous confirmons la résiliation de votre abonnement ; aucun nouveau prélèvement n'aura lieu. MEDACTIO ne conserve aucun document.\n\nMerci d’avoir utilisé Medactio.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-03 — Motif de départ",
+    "subject": "Votre retour nous intéresse",
+    "body": "Bonjour {{contact}},\n\nPouvez-vous nous indiquer en une phrase pourquoi vous quittez MEDACTIO ? Votre réponse nous aide à nous améliorer.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-04 — Accord du référent avant approche",
+    "subject": "MEDACTIO — ouvrir l'accès à d'autres services de {{etablissement}}",
+    "body": "Bonjour {{contact}},\n\nL'utilisation de MEDACTIO dans [service] donne de bons résultats. Souhaiteriez-vous que nous présentions la solution à d'autres services, par exemple [liste] ? Nous ne prendrons contact avec eux qu'avec votre accord.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CSM",
+    "name": "CSM-04 — Présentation à la direction du GHT",
+    "subject": "MEDACTIO — retour d'expérience de {{etablissement}}",
+    "body": "Bonjour {{contact}},\n\n{{etablissement}} utilise MEDACTIO pour la rédaction de ses écrits hospitaliers depuis [date]. Avec l'accord de [référent], nous souhaiterions vous présenter la solution, hébergée chez OVH (hébergeur certifié HDS) et ne nécessitant aucune intégration à votre système d'information. Seriez-vous disponible pour 30 minutes ? https://calendly.com/roland-mafouta-medactio/30min\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-01 — Envoi du dossier de conformité",
+    "subject": "Dossier de conformité MEDACTIO (version [X.Y])",
+    "body": "Bonjour {{contact}},\n\nComme convenu, vous trouverez ci-joint le dossier de conformité de MEDACTIO (version [X.Y] du [date]), ainsi que les CGU, les CGV et les mentions légales. Il précise notamment l'hébergement chez OVH, hébergeur certifié HDS, l'absence de stockage de données de santé de patients et le circuit des données.\n\nNous restons à votre disposition pour tout complément à contact@medactio.fr, ou lors d'un échange de [30] minutes : https://calendly.com/roland-mafouta-medactio/30min.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-02 — Réponse à une question sur la pseudonymisation",
+    "subject": "Votre question sur la pseudonymisation dans MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci pour votre question. [Reprendre le passage pertinent du texte d'information.] Ce filtre réduit le risque mais ne dispense pas de relire chaque document avant de le valider.\n\nPour tout détail technique, notre dossier de conformité est disponible sur demande.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-03 — Accusé de réception",
+    "subject": "Votre questionnaire sécurité — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous avons bien reçu votre questionnaire et vous adresserons nos réponses d'ici le [date]. Nous y joindrons notre dossier de conformité à jour.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-03 — Envoi des réponses",
+    "subject": "Réponses au questionnaire sécurité — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nVous trouverez ci-joint nos réponses à votre questionnaire ainsi que notre dossier de conformité (version [X.Y]). Les points en cours de vérification sont signalés : nous reviendrons vers vous avant le [date].\n\nNous restons disponibles pour un échange avec votre DSI ou votre DPO.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-04 — Accusé de réception d'une demande de droits",
+    "subject": "Votre demande relative à vos données personnelles",
+    "body": "Bonjour {{contact}},\n\nNous avons bien reçu votre demande du [date]. Afin de la traiter, merci de nous confirmer votre identité en répondant à ce message. Nous reviendrons vers vous dans les délais prévus par la réglementation.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-04 — Notification d'une violation de données à un client",
+    "subject": "Information sur un incident de sécurité concernant MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nNous vous informons d'un incident de sécurité survenu le [date], détecté le [date]. Nature de l'incident : [description]. Données potentiellement concernées : [catégories]. Mesures prises : [mesures]. Mesures recommandées de votre côté : [actions].\n\nUn point de contact est à votre disposition : contact@medactio.fr. Nous vous tiendrons informés de la suite.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "CONF",
+    "name": "CONF-05 — Demande d'attestation à l'hébergeur",
+    "subject": "Grays & Co — demande d'attestation de certification HDS",
+    "body": "Bonjour,\n\nDans le cadre du suivi de nos engagements de conformité, pourriez-vous nous transmettre l'attestation de certification HDS en vigueur pour les services que nous utilisons, avec le périmètre, la date de validité et la liste des datacentres concernés ?\n\nCordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "PROD",
+    "name": "PROD-01 — Retour au demandeur",
+    "subject": "Votre suggestion pour MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nMerci pour votre suggestion concernant [sujet]. Nous l'avons enregistrée et étudiée. [Elle est retenue pour étude / Nous ne la retenons pas pour le moment, car [motif].] Nous reviendrons vers vous si elle évolue.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "PROD",
+    "name": "PROD-02 — Nouveautés",
+    "subject": "Nouveautés MEDACTIO — [mois]",
+    "body": "Bonjour,\n\nVoici ce qui change dans MEDACTIO : [évolution], disponible depuis le [date]. Ce que cela change pour vous : [bénéfice]. Aucune action n'est nécessaire [ou : action à réaliser].\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "PROD",
+    "name": "PROD-02 — Changement de sous-traitant",
+    "subject": "Information sur un changement de sous-traitant — MEDACTIO",
+    "body": "Bonjour {{contact}},\n\nConformément à nos engagements, nous vous informons que [sous-traitant actuel] sera remplacé par [nouveau sous-traitant] à compter du [date, au moins 30 jours]. Vous disposez de 30 jours pour nous faire part de toute objection : contact@medactio.fr.\n\nBien cordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "INT",
+    "name": "INT-01 — Ordre du jour du point hebdomadaire",
+    "subject": "Point hebdomadaire MEDACTIO — [date]",
+    "body": "Ordre du jour : 1) Pipeline et rendez-vous ;\n\n2) Support et incidents ;\n\n3) Actions en retard ; 4) Points à décider ;\n\n5) Prochaines échéances.\n\nDurée : 30 minutes. Lien : [Zoom].",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "INT",
+    "name": "INT-01 — Compte rendu",
+    "subject": "Compte rendu — [réunion] du [date]",
+    "body": "Participants : [liste].\n\nDécisions : [décision — responsable — échéance].\n\nActions : [action — responsable — échéance].\n\nPoints ouverts : [liste].\n\nProchaine réunion : [date].",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "INT",
+    "name": "INT-02 — Demande de modification d'une procédure",
+    "subject": "Demande de modification — [code] [titre]",
+    "body": "Procédure concernée : [code, version].\n\nModification demandée : [description].\n\nMotif : [changement d'offre, outil, conformité, retour du terrain].\n\nDemandeur : [nom].\n\nUrgence : [normale, haute].",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "INT",
+    "name": "INT-03 — Point d'intégration à 30 jours",
+    "subject": "Point d'intégration — 30 jours",
+    "body": "Bonjour {{contact}},\n\nFaisons le point sur ton intégration : ce qui fonctionne, ce qui manque, les procédures à clarifier. Disponible le [date] ? [lien]\n\nCordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  },
+  {
+    "category": "INT",
+    "name": "INT-04 — Demande d'informations de conformité à un prestataire",
+    "subject": "Grays & Co — informations de conformité",
+    "body": "Bonjour,\n\nDans le cadre du suivi de nos engagements, pourriez-vous nous transmettre : vos certifications en vigueur, la localisation des données traitées, vos sous-traitants ultérieurs, vos mesures de sécurité et votre procédure de notification d'incident ?\n\nCordialement,\n{{expediteur}}",
+    "trigger": null,
+    "delayDays": 0
+  }
+]

@@ -5,6 +5,8 @@ import * as db from "../db";
 import { knowledgeCategories } from "../../drizzle/schema";
 import * as gov from "../governance.db";
 import * as autom from "../automations.db";
+import { emailRunSummary } from "../automations.scheduler";
+import { processDueEmails } from "../email.automation";
 import { automationKeys } from "../../drizzle/schema";
 import { runInvoiceReminders } from "../finance.reminders";
 import * as cs from "../customer-success.db";
@@ -60,6 +62,9 @@ async function runAutomationNow(key: (typeof automationKeys)[number]): Promise<s
   if (key === "daily-invoice-reminders") {
     const result = await runInvoiceReminders();
     return `${result.markedOverdue} facture(s) passée(s) en retard, ${result.remindersSent} relance(s) envoyée(s)${result.remindersFailed ? `, ${result.remindersFailed} en échec` : ""}.`;
+  }
+  if (key === "scheduled-emails") {
+    return emailRunSummary(await processDueEmails());
   }
   const result = await gov.refreshNotifications();
   return `${result.created} notification(s) créée(s) pour ${result.recipients} destinataire(s).`;

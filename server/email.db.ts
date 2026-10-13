@@ -24,6 +24,8 @@ export async function listTemplates(category?: string) {
       category: emailTemplates.category,
       subject: emailTemplates.subject,
       body: emailTemplates.body,
+      trigger: emailTemplates.trigger,
+      delayDays: emailTemplates.delayDays,
       createdBy: emailTemplates.createdBy,
       authorName: internalUsers.fullName,
       updatedAt: emailTemplates.updatedAt,
@@ -62,6 +64,10 @@ export type MessageVariables = {
   etablissement?: string | null;
   expediteur?: string | null;
   poste?: string | null;
+  /** Intitulé du ticket support concerné. */
+  ticket?: string | null;
+  /** Numéro de suivi du ticket, sous la forme « #42 ». */
+  numero?: string | null;
 };
 
 /**
@@ -70,9 +76,13 @@ export type MessageVariables = {
  * « Bonjour {{contact}} » dans un email envoyé ferait mauvais effet.
  */
 export function applyVariables(text: string, values: MessageVariables): string {
-  return text.replace(/\{\{\s*(contact|etablissement|expediteur|poste)\s*\}\}/g, (_, key: keyof MessageVariables) =>
-    (values[key] ?? "").trim()
-  );
+  return text
+    .replace(/\{\{\s*(contact|etablissement|expediteur|poste|ticket|numero)\s*\}\}/g, (_, key: keyof MessageVariables) =>
+      (values[key] ?? "").trim()
+    )
+    // Une variable vide ne doit pas laisser « Bonjour , » ni de double espace.
+    .replace(/[^\S\n]+,/g, ",")
+    .replace(/[^\S\n]{2,}/g, " ");
 }
 
 /* ------------------------------------------------------------------ */

@@ -57,6 +57,15 @@ export const automationCatalog: {
     schedule: "Tous les jours à 07:30",
     endpoint: "/api/scheduled/governance-watch",
   },
+  {
+    key: "scheduled-emails",
+    label: "Envoi des emails programmés",
+    description:
+      "Envoie les relances déclenchées par les modèles (après démonstration, après devis, suivi de ticket) et les messages programmés à la main.",
+    pole: "Commercial & Support",
+    schedule: "Toutes les 15 minutes",
+    endpoint: "/api/scheduled/emails",
+  },
 ];
 
 /** Crée les lignes manquantes : un traitement neuf est désactivé par défaut. */
