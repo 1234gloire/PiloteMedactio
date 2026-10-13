@@ -33,4 +33,8 @@ CREATE INDEX "scheduled_emails_ticket_idx" ON "scheduled_emails" ("ticketId");
 --> statement-breakpoint
 ALTER TABLE "scheduled_emails" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
+-- Oubli de la migration 0003 : les modèles étaient la seule table ouverte à
+-- PostgREST. RLS active sans politique, comme partout ailleurs.
+ALTER TABLE "email_templates" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
 INSERT INTO "automations" ("key") VALUES ('scheduled-emails') ON CONFLICT ("key") DO NOTHING;
