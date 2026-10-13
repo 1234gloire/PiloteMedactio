@@ -14,6 +14,7 @@ import {
   supportTickets,
 } from "../drizzle/schema";
 import { getAutomation, setAutomationEnabled } from "./automations.db";
+import { onTicketStatusChanged, ticketRecipient, type TriggerResult } from "./email.automation";
 import { requireDb } from "./db";
 import { sendMail } from "./_core/mailer";
 import { storagePut, storageUrlFor } from "./storage";
@@ -140,49 +141,40 @@ export async function updateTicket(id: number, data: Partial<typeof supportTicke
     await db.insert(supportTicketEvents).values({ ticketId: id, authorId: authorId ?? null, eventType: "Changement Statut", content: `Statut modifié : ${current.status} → ${data.status}.` });
   }
 
-  // La résolution est le seul changement de statut qui intéresse le
-  // demandeur : les étapes intermédiaires relèvent du suivi interne.
-  if (data.status === "Resolu" && current.status !== "Resolu") {
-    const recipient = await ticketRecipient(current);
-    if (recipient) {
-      void sendMail({
-        to: recipient.email,
-        toName: recipient.name,
-        subject: `Votre demande a été traitée — ${current.title}`,
-        text: `Bonjour${recipient.name ? ` ${recipient.name}` : ""},
+  // Un changement de statut envoie au demandeur les modèles rattachés à cette
+  // étape (voir email.automation.ts). Faute de modèle « ticket résolu », la
+  // résolution garde son message par défaut : le client doit savoir que sa
+  // demande est close.
+  let mail: TriggerResult | null = null;
+  if (data.status && data.status !== current.status) {
+    mail = await onTicketStatusChanged(current, data.status, authorId ?? null);
+    if (data.status === "Resolu" && mail.templates === 0) {
+      const recipient = await ticketRecipient(current);
+      if (recipient) {
+        const result = await sendMail({
+          to: recipient.email,
+          toName: recipient.name,
+          subject: `Votre demande a été traitée — ${current.title}`,
+          text: `Bonjour${recipient.name ? ` ${recipient.name}` : ""},
 
 Votre demande d’assistance « ${current.title} » vient d’être traitée par notre équipe.
 
 Si le problème persiste ou si la réponse ne vous paraît pas complète, répondez simplement à cet email : nous rouvrirons votre demande.
 
 L’équipe support Medactio`,
-      });
+        });
+        mail = { templates: 0, sent: result.sent ? 1 : 0, scheduled: 0, ...(result.reason ? { reason: result.reason } : {}) };
+      }
     }
   }
 
-  return { success: true } as const;
+  return { success: true, mail } as const;
 }
 
 export async function deleteTicket(id: number) {
   const db = await requireDb();
   await db.delete(supportTickets).where(eq(supportTickets.id, id));
   return { success: true } as const;
-}
-
-/**
- * Adresse à laquelle répondre à un demandeur, et son nom.
- *
- * Un ticket ouvert depuis le produit par une adresse inconnue du CRM reste
- * joignable : son adresse figure dans la description, faute de contact.
- */
-async function ticketRecipient(ticket: typeof supportTickets.$inferSelect) {
-  const db = await requireDb();
-  if (ticket.contactId) {
-    const contact = (await db.select().from(contacts).where(eq(contacts.id, ticket.contactId)).limit(1))[0];
-    if (contact?.email) return { email: contact.email, name: contact.fullName };
-  }
-  const match = (ticket.description || "").match(/<([^>]+@[^>]+)>/);
-  return match ? { email: match[1], name: null as string | null } : null;
 }
 
 export async function addTicketEvent(data: typeof supportTicketEvents.$inferInsert) {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { describeMailResult } from "@/components/crm/ScheduledEmails";
 import { trpc } from "@/lib/trpc";
 import { Building2, CalendarDays, ChevronRight, Columns3, GripVertical, List, Pencil, Search, Trash2 } from "lucide-react";
 import { DragEvent, useState } from "react";
@@ -14,7 +15,7 @@ import { useLocation } from "wouter";
 export default function PipelinePage() {
   const [, setLocation] = useLocation(); const utils = trpc.useUtils(); const [search, setSearch] = useState(""); const [dialog, setDialog] = useState<{ type: "create" | "edit" | "delete"; item?: any } | null>(null); const [dragged, setDragged] = useState<number | null>(null);
   const profile = trpc.crm.profile.useQuery(); const query = trpc.crm.deals.list.useQuery({ search }); const move = trpc.crm.deals.move.useMutation(); const remove = trpc.crm.deals.delete.useMutation(); const canWrite = canWriteCrm(profile.data?.role);
-  const moveDeal = async (id: number, stage: typeof STAGES[number]) => { const previous = query.data; utils.crm.deals.list.setData({ search }, old => old?.map(deal => deal.id === id ? { ...deal, stage } : deal)); try { await move.mutateAsync({ id, stage }); await Promise.all([utils.crm.deals.invalidate(), utils.crm.dashboard.invalidate(), utils.crm.organizations.invalidate()]); toast.success(`Opportunité déplacée vers « ${labelFor(stage)} »`); } catch (error) { utils.crm.deals.list.setData({ search }, previous); toast.error(error instanceof Error ? error.message : "Déplacement impossible"); } setDragged(null); };
+  const moveDeal = async (id: number, stage: typeof STAGES[number]) => { const previous = query.data; utils.crm.deals.list.setData({ search }, old => old?.map(deal => deal.id === id ? { ...deal, stage } : deal)); try { const result = await move.mutateAsync({ id, stage }); await Promise.all([utils.crm.deals.invalidate(), utils.crm.dashboard.invalidate(), utils.crm.organizations.invalidate(), utils.email.scheduled.list.invalidate()]); const feedback = describeMailResult(`Opportunité déplacée vers « ${labelFor(stage)} »`, result.mail); if (feedback.ok) toast.success(feedback.message); else toast.warning(feedback.message); } catch (error) { utils.crm.deals.list.setData({ search }, previous); toast.error(error instanceof Error ? error.message : "Déplacement impossible"); } setDragged(null); };
   const onDrop = (event: DragEvent, stage: typeof STAGES[number]) => { event.preventDefault(); const id = Number(event.dataTransfer.getData("text/deal-id") || dragged); if (id && canWrite) void moveDeal(id, stage); };
   const confirmDelete = async () => { if (!dialog?.item) return; try { await remove.mutateAsync({ id: dialog.item.id }); await Promise.all([utils.crm.deals.invalidate(), utils.crm.dashboard.invalidate()]); toast.success("Opportunité supprimée"); setDialog(null); } catch (error) { toast.error(error instanceof Error ? error.message : "Suppression impossible"); } };
   const data = query.data || [];

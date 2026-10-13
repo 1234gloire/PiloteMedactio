@@ -9,6 +9,7 @@ import {
   runCustomerSuccessAlerts,
   runGovernanceWatch,
   runInvoiceRemindersRoute,
+  runScheduledEmails,
   runSupportAlerts,
 } from "../automations.scheduler";
 import { applyLeadCaptureCors, captureMarketingLead } from "../marketing.capture";
@@ -48,6 +49,7 @@ async function startServer() {
   app.post("/api/scheduled/support-alerts", runSupportAlerts);
   app.post("/api/scheduled/invoice-reminders", runInvoiceRemindersRoute);
   app.post("/api/scheduled/governance-watch", runGovernanceWatch);
+  app.post("/api/scheduled/emails", runScheduledEmails);
   app.options("/api/public/marketing/leads", (req, res) => { applyLeadCaptureCors(req, res); res.sendStatus(204); });
   app.post("/api/public/marketing/leads", captureMarketingLead);
   // Ouverture de ticket depuis le produit Medactio (serveur à serveur).

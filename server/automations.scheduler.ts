@@ -5,6 +5,7 @@ import { refreshCustomerAlerts } from "./customer-success.db";
 import { refreshSupportAlerts } from "./support.db";
 import { runInvoiceReminders } from "./finance.reminders";
 import { refreshNotifications } from "./governance.db";
+import { processDueEmails } from "./email.automation";
 
 /**
  * Déclenchement des traitements planifiés.
@@ -79,3 +80,12 @@ export const runGovernanceWatch = scheduledRoute(
     return { ...result, summary: `${result.created} notification(s) créée(s) pour ${result.recipients} destinataire(s).` };
   }
 );
+
+export const runScheduledEmails = scheduledRoute("scheduled-emails", "Envoi des emails programmés", async () => {
+  const result = await processDueEmails();
+  return { ...result, summary: emailRunSummary(result) };
+});
+
+export function emailRunSummary(result: { sent: number; failed: number }) {
+  return `${result.sent} email(s) envoyé(s)${result.failed ? `, ${result.failed} en échec` : ""}.`;
+}

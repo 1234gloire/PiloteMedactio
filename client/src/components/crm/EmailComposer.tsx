@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Mail, Send } from "lucide-react";
+import { CalendarClock, Loader2, Mail, Send } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { labelFor } from "./Common";
@@ -16,6 +16,15 @@ export type EmailTarget =
   | { kind: "contact"; id: number }
   | { kind: "lead"; id: number }
   | { kind: "organization"; id: number };
+
+/** Valeur par défaut d'un champ datetime-local : demain à 9 h, heure locale. */
+function tomorrowAtNine() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(9, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T09:00`;
+}
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Une erreur est survenue.";
@@ -47,10 +56,15 @@ export function EmailComposer({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [templateId, setTemplateId] = useState("none");
+  const [later, setLater] = useState(false);
+  const [sendAt, setSendAt] = useState(tomorrowAtNine);
 
   const status = trpc.email.status.useQuery(undefined, { enabled: open });
   const templates = trpc.email.templates.list.useQuery(undefined, { enabled: open });
   const send = trpc.email.send.useMutation();
+  const schedule = trpc.email.schedule.useMutation();
+  const utils = trpc.useUtils();
+  const pending = send.isPending || schedule.isPending;
 
   const applyTemplate = (value: string) => {
     setTemplateId(value);
@@ -65,9 +79,16 @@ export function EmailComposer({
     event.preventDefault();
     if (!target) return;
     try {
-      const result = await send.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null });
-      toast.success(`Message envoyé à ${result.to}.`);
-      setSubject(""); setBody(""); setTemplateId("none");
+      if (later) {
+        // datetime-local est en heure locale : new Date() la convertit avant l'envoi au serveur.
+        const result = await schedule.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, sendAt: new Date(sendAt) });
+        await utils.email.scheduled.list.invalidate();
+        toast.success(`Envoi programmé pour ${result.to} le ${new Date(result.sendAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}.`);
+      } else {
+        const result = await send.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null });
+        toast.success(`Message envoyé à ${result.to}.`);
+      }
+      setSubject(""); setBody(""); setTemplateId("none"); setLater(false);
       onSent?.();
       onOpenChange(false);
     } catch (error) {
@@ -126,11 +147,24 @@ export function EmailComposer({
               </p>
             </div>
 
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
+                <input type="checkbox" checked={later} onChange={e => setLater(e.target.checked)} className="h-4 w-4 accent-[#123653]" />
+                <CalendarClock className="h-4 w-4 text-sky-700" />Programmer l’envoi
+              </label>
+              {later ? (
+                <div className="mt-3">
+                  <Input type="datetime-local" required value={sendAt} onChange={e => setSendAt(e.target.value)} className={fieldClass} />
+                  <p className="mt-2 text-xs text-muted-foreground">Le message partira automatiquement à cette date ; vous pourrez l’annuler d’ici là.</p>
+                </div>
+              ) : null}
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-              <Button type="submit" disabled={send.isPending || !target} className="bg-[#123653]">
-                {send.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                Envoyer
+              <Button type="submit" disabled={pending || !target} className="bg-[#123653]">
+                {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : later ? <CalendarClock className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}
+                {later ? "Programmer" : "Envoyer"}
               </Button>
             </DialogFooter>
           </form>

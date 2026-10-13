@@ -619,6 +619,7 @@ export const automationKeys = [
   "daily-support-alerts",
   "daily-invoice-reminders",
   "daily-governance-watch",
+  "scheduled-emails",
 ] as const;
 
 export const automations = pgTable("automations", {
@@ -647,6 +648,18 @@ export const knowledgeCategories = [
   "SUP",
 ] as const;
 
+/**
+ * Événements pouvant déclencher l'envoi d'un modèle au client.
+ * Format « objet:étape » : l'étape reprend exactement la valeur en base.
+ */
+export const emailTriggers = [
+  "ticket:En cours",
+  "ticket:En attente client",
+  "ticket:Resolu",
+  "deal:Demo Effectuee",
+  "deal:Devis Envoye",
+] as const;
+
 export const emailTemplates = pgTable("email_templates", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 160 }).notNull(),
@@ -656,10 +669,51 @@ export const emailTemplates = pgTable("email_templates", {
     .notNull(),
   subject: varchar("subject", { length: 240 }).notNull(),
   body: text("body").notNull(),
+  // Événement qui déclenche l'envoi sans intervention : un ticket marqué
+  // résolu, une démonstration effectuée… Sans déclencheur, le modèle ne sert
+  // qu'à la rédaction manuelle.
+  trigger: varchar("trigger", { length: 48, enum: emailTriggers }),
+  // 0 : envoi au moment de l'événement. Au-delà : relance programmée J+n.
+  delayDays: integer("delayDays").default(0).notNull(),
   createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 });
+
+/**
+ * Emails à envoyer plus tard : relances déclenchées par un modèle, ou envoi
+ * programmé à la main depuis la rédaction.
+ *
+ * Le message est figé (variables remplacées) au moment de la programmation :
+ * ce qui part est exactement ce qui a été relu. Un changement d'étape du
+ * ticket ou de l'opportunité annule les relances devenues hors de propos.
+ */
+export const scheduledEmails = pgTable("scheduled_emails", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  templateId: integer("templateId").references(() => emailTemplates.id, { onDelete: "set null" }),
+  trigger: varchar("trigger", { length: 48, enum: emailTriggers }),
+  ticketId: integer("ticketId").references(() => supportTickets.id, { onDelete: "cascade" }),
+  dealId: integer("dealId").references(() => deals.id, { onDelete: "cascade" }),
+  contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),
+  toEmail: varchar("toEmail", { length: 320 }).notNull(),
+  toName: varchar("toName", { length: 240 }),
+  subject: varchar("subject", { length: 240 }).notNull(),
+  body: text("body").notNull(),
+  sendAt: timestamp("sendAt", { withTimezone: true }).notNull(),
+  status: varchar("status", { length: 16, enum: ["Programme", "Envoye", "Echec", "Annule"] })
+    .default("Programme")
+    .notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("lastError"),
+  sentAt: timestamp("sentAt", { withTimezone: true }),
+  createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+}, table => [
+  index("scheduled_emails_due_idx").on(table.status, table.sendAt),
+  index("scheduled_emails_deal_idx").on(table.dealId),
+  index("scheduled_emails_ticket_idx").on(table.ticketId),
+]);
 
 export const notifications = pgTable("notifications", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

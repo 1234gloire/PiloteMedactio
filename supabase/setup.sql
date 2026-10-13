@@ -107,6 +107,22 @@ select cron.schedule(
   $$
 );
 
+-- Emails programmés (relances après démo, suivi de ticket) — toutes les 15 minutes
+select cron.schedule(
+  'medactio-scheduled-emails',
+  '*/15 * * * *',
+  $$
+  select net.http_post(
+    url     := '<URL_APPLICATION>/api/scheduled/emails',
+    headers := jsonb_build_object(
+      'Content-Type',  'application/json',
+      'Authorization', 'Bearer <CRON_SECRET>'
+    ),
+    body    := '{}'::jsonb
+  );
+  $$
+);
+
 -- Vérifier les planifications :       select * from cron.job;
 -- Consulter les dernières exécutions : select * from cron.job_run_details order by start_time desc limit 20;
 -- Supprimer une planification :       select cron.unschedule('medactio-support-alerts');

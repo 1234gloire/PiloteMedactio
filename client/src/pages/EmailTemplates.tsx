@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, PageHeader, formatDate, labelFor } from "@/components/crm/Common";
+import { ScheduledEmailsCard, TRIGGERS, delayLabel, triggerLabel, type TriggerValue } from "@/components/crm/ScheduledEmails";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Mail, MailPlus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Mail, MailPlus, Pencil, Trash2, Zap } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
@@ -37,6 +38,8 @@ function TemplateDialog({ open, onOpenChange, initial }: { open: boolean; onOpen
     category: initial?.category || "INT",
     subject: initial?.subject || "",
     body: initial?.body || "",
+    trigger: (initial?.trigger || "") as TriggerValue | "",
+    delayDays: String(initial?.delayDays ?? 0),
   });
   const create = trpc.email.templates.create.useMutation();
   const update = trpc.email.templates.update.useMutation();
@@ -45,7 +48,12 @@ function TemplateDialog({ open, onOpenChange, initial }: { open: boolean; onOpen
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     try {
-      const payload = { ...form, category: form.category as (typeof categories)[number] };
+      const payload = {
+        ...form,
+        category: form.category as (typeof categories)[number],
+        trigger: form.trigger || null,
+        delayDays: form.trigger ? Math.max(0, Math.min(90, Number(form.delayDays) || 0)) : 0,
+      };
       if (initial?.id) await update.mutateAsync({ id: initial.id, ...payload });
       else await create.mutateAsync(payload);
       await utils.email.templates.list.invalidate();
@@ -87,8 +95,37 @@ function TemplateDialog({ open, onOpenChange, initial }: { open: boolean; onOpen
             <Textarea required minLength={10} maxLength={20000} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })}
               className="min-h-56 rounded-lg border-slate-200 bg-white leading-6 focus:border-teal-600" />
             <p className="mt-2 text-xs text-muted-foreground">
-              Variables disponibles : <code>{"{{contact}}"}</code>, <code>{"{{etablissement}}"}</code>, <code>{"{{expediteur}}"}</code>, <code>{"{{poste}}"}</code>.
+              Variables disponibles : <code>{"{{contact}}"}</code>, <code>{"{{etablissement}}"}</code>, <code>{"{{expediteur}}"}</code>, <code>{"{{poste}}"}</code>
+              {form.trigger.startsWith("ticket:") ? <>, <code>{"{{ticket}}"}</code> (intitulé), <code>{"{{numero}}"}</code> (n° de suivi)</> : null}.
             </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Zap className="h-4 w-4 text-amber-500" />Envoi automatique</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Le modèle part tout seul au client quand l’événement se produit — immédiatement, ou en relance quelques jours plus tard
+              (à 9 h, un jour ouvré). Si l’étape change entre-temps, la relance est annulée.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_160px]">
+              <div>
+                <Label className="mb-2 block text-xs font-semibold text-slate-600">Déclencheur</Label>
+                <select value={form.trigger} onChange={e => setForm({ ...form, trigger: e.target.value as TriggerValue | "" })} className={selectClass}>
+                  <option value="">Aucun — rédaction manuelle uniquement</option>
+                  {TRIGGERS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="mb-2 block text-xs font-semibold text-slate-600">Envoyer après (jours)</Label>
+                <Input type="number" min={0} max={90} disabled={!form.trigger} value={form.delayDays}
+                  onChange={e => setForm({ ...form, delayDays: e.target.value })} className={fieldClass} />
+              </div>
+            </div>
+            {form.trigger ? (
+              <p className="mt-2 text-xs text-slate-600">
+                {Number(form.delayDays) > 0
+                  ? `Envoyé ${Number(form.delayDays)} jour(s) après « ${triggerLabel(form.trigger)} ».`
+                  : `Envoyé dès que l’événement « ${triggerLabel(form.trigger)} » se produit.`}
+              </p>
+            ) : null}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
@@ -153,7 +190,14 @@ export default function EmailTemplates() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${tone[template.category]}`}>{labelFor(template.category)}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${tone[template.category]}`}>{labelFor(template.category)}</span>
+                      {template.trigger ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">
+                          <Zap className="h-3 w-3" />{triggerLabel(template.trigger)} · {delayLabel(template.delayDays)}
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-2 font-semibold text-slate-950">{template.name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">Objet : {template.subject}</p>
                   </div>
@@ -179,6 +223,8 @@ export default function EmailTemplates() {
           onAction={canWrite ? () => setDialog({ open: true }) : undefined}
         />
       )}
+
+      <ScheduledEmailsCard canCancel={canWrite} className="mt-6 border-0 shadow-sm" emptyHidden pendingOnly />
 
       {recent.data?.length ? (
         <Card className="mt-6 border-0 shadow-sm">

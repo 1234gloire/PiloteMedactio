@@ -3,7 +3,8 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import * as emailDb from "../email.db";
-import { knowledgeCategories } from "../../drizzle/schema";
+import * as emailAuto from "../email.automation";
+import { emailTriggers, knowledgeCategories } from "../../drizzle/schema";
 import { isMailConfigured } from "../_core/mailer";
 
 type Ctx = { user: NonNullable<Parameters<typeof db.ensureInternalProfile>[0]> };
@@ -51,6 +52,8 @@ export const emailRouter = router({
         category: z.enum(categories).default("INT"),
         subject: z.string().trim().min(2).max(240),
         body: z.string().trim().min(10).max(20_000),
+        trigger: z.enum(emailTriggers).nullable().default(null),
+        delayDays: z.number().int().min(0).max(90).default(0),
       }))
       .mutation(async ({ ctx, input }) => {
         const profile = await requireWriter(ctx);
@@ -64,6 +67,8 @@ export const emailRouter = router({
         category: z.enum(categories).optional(),
         subject: z.string().trim().min(2).max(240).optional(),
         body: z.string().trim().min(10).max(20_000).optional(),
+        trigger: z.enum(emailTriggers).nullable().optional(),
+        delayDays: z.number().int().min(0).max(90).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await requireWriter(ctx);
@@ -110,6 +115,49 @@ export const emailRouter = router({
       }
       return result;
     }),
+
+  /**
+   * Programme un message pour plus tard. L'heure est vérifiée côté serveur :
+   * un envoi « programmé » dans le passé partirait au prochain passage sans
+   * que personne l'ait voulu.
+   */
+  schedule: protectedProcedure
+    .input(z.object({
+      recipient: recipientInput,
+      subject: z.string().trim().min(2).max(240),
+      body: z.string().trim().min(5).max(20_000),
+      dealId: z.number().int().positive().optional().nullable(),
+      sendAt: z.coerce.date(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const profile = await requireWriter(ctx);
+      if (input.sendAt.getTime() < Date.now() + 60_000) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez une date d’envoi à venir." });
+      }
+      const result = await emailAuto.scheduleManual(input, profile);
+      if (!result.scheduled) throw new TRPCError({ code: "BAD_REQUEST", message: result.reason });
+      return result;
+    }),
+
+  scheduled: router({
+    list: protectedProcedure
+      .input(z.object({
+        dealId: z.number().int().positive().optional(),
+        ticketId: z.number().int().positive().optional(),
+        pendingOnly: z.boolean().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        await db.ensureInternalProfile(ctx.user);
+        return emailAuto.listScheduled(input);
+      }),
+
+    cancel: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        await requireWriter(ctx);
+        return emailAuto.cancelScheduled(input.id);
+      }),
+  }),
 
   recent: protectedProcedure.query(async ({ ctx }) => {
     await db.ensureInternalProfile(ctx.user);

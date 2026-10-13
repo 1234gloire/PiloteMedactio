@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import { currentDealStage, onDealStageChanged } from "../email.automation";
 
 const organizationTypes = ["Hopital Public", "Clinique Privee", "Groupement Hospitalier", "Cabinet Liberal"] as const;
 const organizationStatuses = ["Prospect", "En Demo", "Negociation", "Client Actif", "Inactif"] as const;
@@ -19,6 +20,18 @@ async function requireCrmWrite(ctx: { user: NonNullable<Parameters<typeof db.ens
     throw new TRPCError({ code: "FORBIDDEN", message: "Votre rôle dispose d’un accès en lecture seule au CRM." });
   }
   return profile;
+}
+
+/**
+ * Applique la mise à jour d'une opportunité puis, si l'étape a changé,
+ * déclenche les emails rattachés à la nouvelle étape (relance après
+ * démonstration, après devis…) et annule ceux de l'étape quittée.
+ */
+async function withStageEmails<T extends object>(dealId: number, stage: string | undefined, authorId: number, apply: () => Promise<T>) {
+  const previous = stage ? await currentDealStage(dealId) : null;
+  const result = await apply();
+  if (!stage || stage === previous) return { ...result, mail: null };
+  return { ...result, mail: await onDealStageChanged(dealId, stage, authorId) };
 }
 
 const organizationInput = z.object({
@@ -103,13 +116,15 @@ export const crmRouter = router({
       return db.createDeal({ ...input, amount: String(input.amount) });
     }),
     update: protectedProcedure.input(dealInput.partial().extend({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-      await requireCrmWrite(ctx);
+      const profile = await requireCrmWrite(ctx);
       const { id, amount, ...data } = input;
-      return db.updateDeal(id, { ...data, ...(amount !== undefined ? { amount: String(amount) } : {}) });
+      return withStageEmails(id, data.stage, profile.id, () =>
+        db.updateDeal(id, { ...data, ...(amount !== undefined ? { amount: String(amount) } : {}) })
+      );
     }),
     move: protectedProcedure.input(z.object({ id: z.number().int().positive(), stage: z.enum(dealStages) })).mutation(async ({ ctx, input }) => {
-      await requireCrmWrite(ctx);
-      return db.updateDeal(input.id, { stage: input.stage });
+      const profile = await requireCrmWrite(ctx);
+      return withStageEmails(input.id, input.stage, profile.id, () => db.updateDeal(input.id, { stage: input.stage }));
     }),
     delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       await requireCrmWrite(ctx);
