@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmailButton } from "@/components/crm/EmailComposer";
 import { trpc } from "@/lib/trpc";
 import { Activity, AlertTriangle, CalendarClock, CheckCircle2, CircleDollarSign, ClipboardCheck, FileText, HeartPulse, Pencil, Plus, RefreshCw, ShieldCheck, TicketCheck, Trash2, UserRound, UsersRound } from "lucide-react";
 import { useState } from "react";
@@ -30,6 +31,7 @@ export default function CustomerDetail({ id }: { id: number }) {
   const deleteSubscription = async () => { if (!activeSubscription) return; try { await removeSubscription.mutateAsync({ id: activeSubscription.id }); await invalidate(); setDialog(null); toast.success("Abonnement supprimé"); } catch (error) { toast.error(error instanceof Error ? error.message : "Suppression impossible"); } };
   const refreshHealth = async () => { try { await refresh.mutateAsync(); await invalidate(); toast.success("Health score et alertes recalculés"); } catch (error) { toast.error(error instanceof Error ? error.message : "Recalcul impossible"); } };
   return <div className="reveal mx-auto max-w-[1450px]"><PageHeader backTo="/clients/liste" eyebrow="Compte client" title={organization.name} description={`${labelFor(organization.type)} · ${organization.city || "Localisation non renseignée"}`} />
+    <div className="mb-5 flex flex-wrap items-center gap-2"><EmailButton target={{ kind: "organization", id: organization.id }} recipientLabel={organization.name} label="Écrire au client" /></div>
     <div className="mb-5 flex flex-wrap items-center gap-2"><StatusBadge value={summary.healthLabel} /><StatusBadge value={summary.subscriptionStatus} /><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">Score {summary.healthScore}/100</span>{canWrite ? <Button variant="outline" size="sm" className="bg-white" onClick={refreshHealth} disabled={refresh.isPending}><RefreshCw className="mr-2 h-4 w-4" />Recalculer</Button> : null}</div>
     <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MiniStat icon={ShieldCheck} label="Licences actives" value={`${summary.activeSeats} / ${summary.seatsPurchased}`} detail={`${summary.seatActivationRate} % d’activation`} /><MiniStat icon={Activity} label="Usage 30 jours" value={`${summary.documentsLast30} écrits`} detail={`${summary.usageTrend >= 0 ? "+" : ""}${summary.usageTrend} % vs période précédente`} /><MiniStat icon={ClipboardCheck} label="Onboarding" value={`${summary.onboardingProgress} %`} detail={`${summary.onboardingCompleted}/${summary.onboardingTotal} étapes terminées`} /><MiniStat icon={CalendarClock} label="Renouvellement" value={summary.daysUntilRenewal !== null && summary.daysUntilRenewal >= 0 ? `J-${summary.daysUntilRenewal}` : "—"} detail={formatDate(summary.renewalDate)} /></div>
 

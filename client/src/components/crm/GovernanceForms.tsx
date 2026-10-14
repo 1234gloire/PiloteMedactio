@@ -21,7 +21,7 @@ const requestTypes = ["Bug", "Evolution"] as const;
 const requestPriorities = ["Basse", "Moyenne", "Haute"] as const;
 const requestStatuses = ["Idee", "Backlog", "En Developpement", "Livre"] as const;
 const changelogTypes = ["Nouvelle Fonctionnalite", "Amelioration", "Correction"] as const;
-const articleCategories = ["Commercial", "Support", "Marketing", "General"] as const;
+const articleCategories = ["ACH", "ACT", "COM", "CONF", "CSM", "DIR", "INT", "MKT", "PROD", "SUP"] as const;
 
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return <div className={className}><Label className="mb-2 block text-xs font-semibold text-slate-600">{label}</Label>{children}</div>;
@@ -454,18 +454,40 @@ export function ArticleDialog({ open, onOpenChange, initial }: { open: boolean; 
   const utils = trpc.useUtils();
   const [form, setForm] = useState({
     title: initial?.title || "",
-    category: initial?.category || "General",
+    category: initial?.category || "INT",
     content: initial?.content || "",
   });
+  const [file, setFile] = useState<File | null>(null);
+
   const create = trpc.governance.knowledge.create.useMutation();
   const update = trpc.governance.knowledge.update.useMutation();
-  const pending = create.isPending || update.isPending;
+  const upload = trpc.governance.knowledge.upload.useMutation();
+  const pending = create.isPending || update.isPending || upload.isPending;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     try {
-      if (initial?.id) await update.mutateAsync({ id: initial.id, ...form, category: form.category as (typeof articleCategories)[number] });
-      else await create.mutateAsync({ ...form, category: form.category as (typeof articleCategories)[number] });
+      if (!form.content.trim() && !file && !initial?.documentName) {
+        throw new Error("Rédigez un contenu ou joignez un document.");
+      }
+      const payload = {
+        title: form.title,
+        category: form.category as (typeof articleCategories)[number],
+        content: form.content || null,
+      };
+      const articleId = initial?.id ?? (await create.mutateAsync(payload)).id;
+      if (initial?.id) await update.mutateAsync({ id: articleId, ...payload });
+
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) throw new Error("Le document dépasse la limite de 10 Mo.");
+        await upload.mutateAsync({
+          id: articleId,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          base64: await fileToBase64(file),
+        });
+      }
+
       await Promise.all([utils.governance.knowledge.list.invalidate(), utils.governance.knowledge.get.invalidate()]);
       toast.success("Article enregistré.");
       onOpenChange(false);
@@ -479,28 +501,42 @@ export function ArticleDialog({ open, onOpenChange, initial }: { open: boolean; 
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{initial?.id ? "Modifier l’article" : "Nouvel article"}</DialogTitle>
-          <DialogDescription>Rédigez en texte simple. Les sauts de ligne sont conservés à l’affichage.</DialogDescription>
+          <DialogDescription>
+            Rédigez la procédure, joignez le document de référence, ou les deux.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Titre"><Input required minLength={3} maxLength={240} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className={fieldClass} /></Field>
+          <Field label="Titre">
+            <Input required minLength={3} maxLength={240} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className={fieldClass} />
+          </Field>
           <Field label="Catégorie">
             <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className={selectClass}>
               {articleCategories.map(category => <option key={category} value={category}>{labelFor(category)}</option>)}
             </select>
           </Field>
           <Field label="Contenu">
-            <Textarea required minLength={10} maxLength={100000} value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} className="min-h-64 rounded-lg border-slate-200 bg-white font-mono text-sm focus:border-teal-600" />
+            <Textarea maxLength={100000} value={form.content} onChange={e => setForm({ ...form, content: e.target.value })}
+              className="min-h-56 rounded-lg border-slate-200 bg-white text-sm leading-6 focus:border-teal-600"
+              placeholder="Facultatif si un document est joint." />
+          </Field>
+          <Field label="Document (Word, PDF — 10 Mo maximum)">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm transition hover:border-teal-500">
+              <FileUp className="h-4 w-4 text-slate-500" />
+              <span className="truncate text-slate-600">{file ? file.name : initial?.documentName || "Choisir un fichier"}</span>
+              <input type="file" className="hidden" accept=".pdf,.doc,.docx,.odt,.rtf,.txt" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+            </label>
           </Field>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button type="submit" disabled={pending} className="bg-[#123653]">{pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Enregistrer</Button>
+            <Button type="submit" disabled={pending} className="bg-[#123653]">
+              {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Enregistrer
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-
 const collaboratorRoles = ["admin", "direction", "commercial", "marketing", "secretariat", "finance"] as const;
 
 /**

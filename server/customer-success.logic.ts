@@ -105,6 +105,7 @@ export function buildCustomerAlertCandidates(customer: {
   organizationId: number;
   organizationName: string;
   subscriptionId: number | null;
+  subscriptionStatus?: string | null;
   renewalDate: string | null;
   daysUntilRenewal: number | null;
   documentsLast30: number;
@@ -115,7 +116,7 @@ export function buildCustomerAlertCandidates(customer: {
   const alerts: Array<{
     organizationId: number;
     subscriptionId: number | null;
-    type: "Renouvellement" | "Sous Utilisation" | "Onboarding Bloque" | "Compte A Risque";
+    type: "Renouvellement" | "Fin d Essai" | "Sous Utilisation" | "Onboarding Bloque" | "Compte A Risque";
     severity: "Info" | "Attention" | "Critique";
     title: string;
     message: string;
@@ -123,7 +124,29 @@ export function buildCustomerAlertCandidates(customer: {
     dedupeKey: string;
   }> = [];
 
-  if (customer.subscriptionId && customer.renewalDate && customer.daysUntilRenewal !== null && customer.daysUntilRenewal >= 0 && customer.daysUntilRenewal <= 90) {
+  const onTrial = customer.subscriptionStatus === "Essai";
+
+  // Fin de période d'essai : la fenêtre est courte et l'enjeu immédiat, car
+  // c'est au terme de l'essai que le premier prélèvement est présenté. Elle
+  // prime sur l'alerte de renouvellement, qui parlerait de « contrat » à un
+  // praticien qui n'en a pas encore signé.
+  if (onTrial && customer.subscriptionId && customer.renewalDate && customer.daysUntilRenewal !== null && customer.daysUntilRenewal >= 0 && customer.daysUntilRenewal <= 7) {
+    alerts.push({
+      organizationId: customer.organizationId,
+      subscriptionId: customer.subscriptionId,
+      type: "Fin d Essai",
+      severity: customer.daysUntilRenewal <= 2 ? "Critique" : "Attention",
+      title: `Fin d’essai — ${customer.organizationName}`,
+      message:
+        customer.daysUntilRenewal === 0
+          ? "L’essai se termine aujourd’hui : le premier prélèvement est imminent."
+          : `L’essai se termine dans ${customer.daysUntilRenewal} jour${customer.daysUntilRenewal > 1 ? "s" : ""}. À confirmer avant le premier prélèvement.`,
+      dueDate: customer.renewalDate,
+      dedupeKey: `trial:${customer.subscriptionId}:${customer.renewalDate}`,
+    });
+  }
+
+  if (!onTrial && customer.subscriptionId && customer.renewalDate && customer.daysUntilRenewal !== null && customer.daysUntilRenewal >= 0 && customer.daysUntilRenewal <= 90) {
     const horizon = customer.daysUntilRenewal <= 30 ? "30j" : customer.daysUntilRenewal <= 60 ? "60j" : "90j";
     alerts.push({
       organizationId: customer.organizationId,

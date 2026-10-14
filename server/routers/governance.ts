@@ -2,7 +2,15 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import { knowledgeCategories } from "../../drizzle/schema";
 import * as gov from "../governance.db";
+import * as autom from "../automations.db";
+import { emailRunSummary } from "../automations.scheduler";
+import { processDueEmails } from "../email.automation";
+import { automationKeys } from "../../drizzle/schema";
+import { runInvoiceReminders } from "../finance.reminders";
+import * as cs from "../customer-success.db";
+import * as support from "../support.db";
 
 type Ctx = { user: NonNullable<Parameters<typeof db.ensureInternalProfile>[0]> };
 
@@ -39,6 +47,27 @@ async function requireSupplierRead(ctx: Ctx) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Votre rôle n’a pas accès au pôle Fournisseurs & Partenaires." });
   }
   return profile;
+}
+
+/** Exécute un traitement planifié à la demande, hors de son horaire. */
+async function runAutomationNow(key: (typeof automationKeys)[number]): Promise<string> {
+  if (key === "daily-customer-success-alerts") {
+    const result = await cs.refreshCustomerAlerts();
+    return `${result.alerts} alerte(s) sur ${result.processedCustomers} client(s).`;
+  }
+  if (key === "daily-support-alerts") {
+    const result = await support.refreshSupportAlerts();
+    return `${result.alerts} alerte(s) active(s).`;
+  }
+  if (key === "daily-invoice-reminders") {
+    const result = await runInvoiceReminders();
+    return `${result.markedOverdue} facture(s) passée(s) en retard, ${result.remindersSent} relance(s) envoyée(s)${result.remindersFailed ? `, ${result.remindersFailed} en échec` : ""}.`;
+  }
+  if (key === "scheduled-emails") {
+    return emailRunSummary(await processDueEmails());
+  }
+  const result = await gov.refreshNotifications();
+  return `${result.created} notification(s) créée(s) pour ${result.recipients} destinataire(s).`;
 }
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date attendue au format AAAA-MM-JJ");
@@ -379,8 +408,8 @@ export const governanceRouter = router({
     create: protectedProcedure
       .input(z.object({
         title: z.string().trim().min(3).max(240),
-        category: z.enum(["Commercial", "Support", "Marketing", "General"]).default("General"),
-        content: z.string().trim().min(10).max(100_000),
+        category: z.enum(knowledgeCategories).default("INT"),
+        content: z.string().trim().max(100_000).optional().nullable(),
       }))
       .mutation(async ({ ctx, input }) => {
         const profile = await profileFor(ctx);
@@ -391,8 +420,8 @@ export const governanceRouter = router({
       .input(z.object({
         id: z.number().int().positive(),
         title: z.string().trim().min(3).max(240).optional(),
-        category: z.enum(["Commercial", "Support", "Marketing", "General"]).optional(),
-        content: z.string().trim().min(10).max(100_000).optional(),
+        category: z.enum(knowledgeCategories).optional(),
+        content: z.string().trim().max(100_000).optional().nullable(),
       }))
       .mutation(async ({ ctx, input }) => {
         const profile = await profileFor(ctx);
@@ -405,6 +434,34 @@ export const governanceRouter = router({
         const { id: articleId, ...rest } = input;
         return gov.updateArticle(articleId, rest);
       }),
+
+    upload: protectedProcedure
+      .input(z.object({
+        id: z.number().int().positive(),
+        fileName: z.string().min(1).max(240),
+        mimeType: z.string().min(1).max(160),
+        base64: z.string().min(1).max(14_000_000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await profileFor(ctx);
+        const article = await gov.getArticle(input.id);
+        if (!article) throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+        if (article.authorId !== profile.id && !["admin", "direction"].includes(profile.role)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Seul l’auteur de l’article peut y joindre un document." });
+        }
+        const { id: articleId, ...file } = input;
+        return gov.uploadArticleDocument(articleId, file);
+      }),
+
+    removeDocument: protectedProcedure.input(id).mutation(async ({ ctx, input }) => {
+      const profile = await profileFor(ctx);
+      const article = await gov.getArticle(input.id);
+      if (!article) throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+      if (article.authorId !== profile.id && !["admin", "direction"].includes(profile.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Seul l’auteur de l’article peut retirer son document." });
+      }
+      return gov.removeArticleDocument(input.id);
+    }),
 
     delete: protectedProcedure.input(id).mutation(async ({ ctx, input }) => {
       const profile = await profileFor(ctx);
@@ -445,5 +502,44 @@ export const governanceRouter = router({
       await requireGovernanceWrite(ctx, "Notifications");
       return gov.refreshNotifications();
     }),
+  }),
+
+  /* ---------------- Automatisations ---------------- */
+  /**
+   * Les traitements planifiés engagent des envois vers les clients : leur
+   * pilotage reste entre les mains de l'administration et de la direction.
+   */
+  automations: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      await requireGovernanceWrite(ctx, "Automatisations");
+      return autom.listAutomations();
+    }),
+
+    setEnabled: protectedProcedure
+      .input(z.object({ key: z.enum(automationKeys), enabled: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        await requireGovernanceWrite(ctx, "Automatisations");
+        return autom.setAutomationEnabled(input.key, input.enabled);
+      }),
+
+    /**
+     * Exécution immédiate, sans attendre l'heure planifiée — pour vérifier
+     * qu'un traitement fonctionne avant de l'activer. L'issue est consignée
+     * comme celle d'une exécution ordinaire.
+     */
+    runNow: protectedProcedure
+      .input(z.object({ key: z.enum(automationKeys) }))
+      .mutation(async ({ ctx, input }) => {
+        await requireGovernanceWrite(ctx, "Automatisations");
+        try {
+          const summary = await runAutomationNow(input.key);
+          await autom.recordAutomationRun(input.key, "Succes", summary);
+          return { summary };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Erreur inconnue";
+          await autom.recordAutomationRun(input.key, "Echec", message).catch(() => undefined);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
+        }
+      }),
   }),
 });

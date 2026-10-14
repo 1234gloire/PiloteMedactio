@@ -4,13 +4,13 @@ import {
   contacts,
   customerAlerts,
   customerOnboardingTasks,
-  customerSuccessAutomations,
   internalUsers,
   organizations,
   subscriptions,
   supportTickets,
   usageLogs,
 } from "../drizzle/schema";
+import { getAutomation, setAutomationEnabled } from "./automations.db";
 import { requireDb } from "./db";
 import {
   buildCustomerAlertCandidates,
@@ -364,29 +364,19 @@ export async function refreshCustomerAlerts(referenceDate = new Date()) {
       createdOrReopened += 1;
     }
   }
-  await db.insert(customerSuccessAutomations).values({
-    name: "daily-customer-success-alerts",
-    enabled: false,
-    lastRunAt: referenceDate,
-  }).onConflictDoUpdate({ target: customerSuccessAutomations.name, set: { lastRunAt: referenceDate } });
   return { processedCustomers: customers.length, alerts: createdOrReopened, ranAt: referenceDate };
 }
 
 /**
- * Active ou suspend le traitement quotidien. La planification elle-même est
- * portée par `pg_cron` côté Supabase : le déclenchement a toujours lieu, et
- * c'est cet indicateur qui décide si le calcul est réellement exécuté.
+ * Active ou suspend le traitement quotidien. L'état est tenu dans le registre
+ * commun des automatisations : la planification, elle, est portée par
+ * `pg_cron` côté Supabase.
  */
 export async function setCustomerAutomationEnabled(enabled: boolean) {
-  const db = await requireDb();
-  await db.insert(customerSuccessAutomations).values({
-    name: "daily-customer-success-alerts",
-    enabled,
-  }).onConflictDoUpdate({ target: customerSuccessAutomations.name, set: { enabled } });
+  await setAutomationEnabled("daily-customer-success-alerts", enabled);
   return { success: true } as const;
 }
 
 export async function getCustomerAutomation() {
-  const db = await requireDb();
-  return (await db.select().from(customerSuccessAutomations).where(eq(customerSuccessAutomations.name, "daily-customer-success-alerts")).limit(1))[0] || null;
+  return getAutomation("daily-customer-success-alerts");
 }

@@ -358,6 +358,10 @@ export const subscriptions = pgTable("subscriptions", {
   startDate: date("startDate", { mode: "string" }),
   renewalDate: date("renewalDate", { mode: "string" }),
   cancelledAt: date("cancelledAt", { mode: "string" }),
+  // Références Stripe, pour rapprocher un abonnement du paiement réel et
+  // éviter tout doublon lorsqu'un même événement est relayé deux fois.
+  stripeCustomerId: varchar("stripeCustomerId", { length: 80 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 80 }).unique(),
   cancellationReason: text("cancellationReason"),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -405,6 +409,7 @@ export const customerAlerts = pgTable(
     }),
     type: varchar("type", { length: 48, enum: [
       "Renouvellement",
+      "Fin d Essai",
       "Sous Utilisation",
       "Onboarding Bloque",
       "Compte A Risque",
@@ -429,16 +434,6 @@ export const customerAlerts = pgTable(
   ]
 );
 
-export const customerSuccessAutomations = pgTable("customer_success_automations", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar("name", { length: 120 }).notNull().unique(),
-  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
-  enabled: boolean("enabled").default(false).notNull(),
-  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
-});
-
 export const invoices = pgTable("invoices", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   organizationId: integer("organizationId")
@@ -448,6 +443,8 @@ export const invoices = pgTable("invoices", {
     onDelete: "set null",
   }),
   invoiceNumber: varchar("invoiceNumber", { length: 80 }).notNull().unique(),
+  // Identifiant de la facture Stripe lorsqu'elle provient d'un prélèvement.
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 80 }).unique(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   status: varchar("status", { length: 32, enum: ["Brouillon", "Envoyee", "Payee", "En Retard"] })
     .default("Brouillon")
@@ -591,16 +588,6 @@ export const supportAlerts = pgTable("support_alerts", {
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("support_alerts_status_due_idx").on(table.status, table.dueAt)]);
 
-export const supportAutomations = pgTable("support_automations", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar("name", { length: 120 }).notNull().unique(),
-  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
-  enabled: boolean("enabled").default(false).notNull(),
-  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
-});
-
 export const usageLogs = pgTable("usage_logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   organizationId: integer("organizationId")
@@ -611,6 +598,122 @@ export const usageLogs = pgTable("usage_logs", {
   aiRequestsCount: integer("aiRequestsCount").default(0).notNull(),
   logDate: date("logDate", { mode: "string" }).notNull(),
 });
+
+/**
+ * Modèles de message réutilisables pour la rédaction d'emails.
+ *
+ * Le corps accepte des variables remplacées à l'ouverture du modèle :
+ * {{contact}}, {{etablissement}}, {{expediteur}}, {{poste}}.
+ */
+/**
+ * Traitements planifiés de la plateforme.
+ *
+ * La planification est portée par `pg_cron` côté Supabase : le déclenchement
+ * a toujours lieu à heure fixe, et c'est `enabled` qui décide si le calcul
+ * est réellement exécuté. Un seul registre pour tous les pôles, afin que la
+ * direction voie d'un coup d'œil ce qui tourne — et qu'ajouter un traitement
+ * ne demande plus de nouvelle table.
+ */
+export const automationKeys = [
+  "daily-customer-success-alerts",
+  "daily-support-alerts",
+  "daily-invoice-reminders",
+  "daily-governance-watch",
+  "scheduled-emails",
+] as const;
+
+export const automations = pgTable("automations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  key: varchar("key", { length: 64, enum: automationKeys }).notNull().unique(),
+  enabled: boolean("enabled").default(false).notNull(),
+  lastRunAt: timestamp("lastRunAt", { withTimezone: true }),
+  // Dernier résultat connu : la direction doit pouvoir constater un échec
+  // sans ouvrir les journaux du serveur.
+  lastStatus: varchar("lastStatus", { length: 16, enum: ["Succes", "Echec"] }),
+  lastDetail: text("lastDetail"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+});
+
+export const knowledgeCategories = [
+  "ACH",
+  "ACT",
+  "COM",
+  "CONF",
+  "CSM",
+  "DIR",
+  "INT",
+  "MKT",
+  "PROD",
+  "SUP",
+] as const;
+
+/**
+ * Événements pouvant déclencher l'envoi d'un modèle au client.
+ * Format « objet:étape » : l'étape reprend exactement la valeur en base.
+ */
+export const emailTriggers = [
+  "ticket:En cours",
+  "ticket:En attente client",
+  "ticket:Resolu",
+  "deal:Demo Effectuee",
+  "deal:Devis Envoye",
+] as const;
+
+export const emailTemplates = pgTable("email_templates", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 160 }).notNull(),
+  // Même classement que la base de connaissances : une seule liste à tenir.
+  category: varchar("category", { length: 32, enum: knowledgeCategories })
+    .default("INT")
+    .notNull(),
+  subject: varchar("subject", { length: 240 }).notNull(),
+  body: text("body").notNull(),
+  // Événement qui déclenche l'envoi sans intervention : un ticket marqué
+  // résolu, une démonstration effectuée… Sans déclencheur, le modèle ne sert
+  // qu'à la rédaction manuelle.
+  trigger: varchar("trigger", { length: 48, enum: emailTriggers }),
+  // 0 : envoi au moment de l'événement. Au-delà : relance programmée J+n.
+  delayDays: integer("delayDays").default(0).notNull(),
+  createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+});
+
+/**
+ * Emails à envoyer plus tard : relances déclenchées par un modèle, ou envoi
+ * programmé à la main depuis la rédaction.
+ *
+ * Le message est figé (variables remplacées) au moment de la programmation :
+ * ce qui part est exactement ce qui a été relu. Un changement d'étape du
+ * ticket ou de l'opportunité annule les relances devenues hors de propos.
+ */
+export const scheduledEmails = pgTable("scheduled_emails", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  templateId: integer("templateId").references(() => emailTemplates.id, { onDelete: "set null" }),
+  trigger: varchar("trigger", { length: 48, enum: emailTriggers }),
+  ticketId: integer("ticketId").references(() => supportTickets.id, { onDelete: "cascade" }),
+  dealId: integer("dealId").references(() => deals.id, { onDelete: "cascade" }),
+  contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),
+  toEmail: varchar("toEmail", { length: 320 }).notNull(),
+  toName: varchar("toName", { length: 240 }),
+  subject: varchar("subject", { length: 240 }).notNull(),
+  body: text("body").notNull(),
+  sendAt: timestamp("sendAt", { withTimezone: true }).notNull(),
+  status: varchar("status", { length: 16, enum: ["Programme", "Envoye", "Echec", "Annule"] })
+    .default("Programme")
+    .notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("lastError"),
+  sentAt: timestamp("sentAt", { withTimezone: true }),
+  createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+}, table => [
+  index("scheduled_emails_due_idx").on(table.status, table.sendAt),
+  index("scheduled_emails_deal_idx").on(table.dealId),
+  index("scheduled_emails_ticket_idx").on(table.ticketId),
+]);
 
 export const notifications = pgTable("notifications", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -750,11 +853,21 @@ export const changelogEntries = pgTable("changelog_entries", {
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Catégories reprises de l'arborescence des procédures de Medactio, afin que
+ * la base de connaissances suive le classement déjà utilisé par l'équipe.
+ */
+
 export const knowledgeBaseArticles = pgTable("knowledge_base_articles", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 240 }).notNull(),
-  category: varchar("category", { length: 32, enum: ["Commercial", "Support", "Marketing", "General"] }).default("General").notNull(),
-  content: text("content").notNull(),
+  category: varchar("category", { length: 32, enum: knowledgeCategories }).default("INT").notNull(),
+  // Un article peut se réduire à un document joint : le texte devient alors
+  // une simple présentation, voire rien du tout.
+  content: text("content"),
+  documentKey: text("documentKey"),
+  documentName: varchar("documentName", { length: 240 }),
+  documentMimeType: varchar("documentMimeType", { length: 160 }),
   authorId: integer("authorId").references(() => internalUsers.id, { onDelete: "set null" }),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
@@ -781,3 +894,4 @@ export type AdminTask = typeof adminTasks.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type EstablishmentContract = typeof establishmentContracts.$inferSelect;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type Automation = typeof automations.$inferSelect;

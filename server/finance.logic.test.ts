@@ -5,6 +5,7 @@ import {
   checkFecBalance,
   fecAmount,
   fecDate,
+  planInvoiceReminders,
   reconcileRecurringRevenue,
   reconciliationProgress,
   serializeFec,
@@ -202,5 +203,80 @@ describe("export FEC", () => {
     expect(rows).toHaveLength(5);
     // Aucune tabulation parasite ne doit décaler les colonnes.
     rows.forEach(row => expect(row.split("\t")).toHaveLength(18));
+  });
+});
+
+describe("relance des impayés", () => {
+  const base = {
+    status: "Envoyee",
+    dueDate: "2026-09-01",
+    paidAt: null,
+    reminderCount: 0,
+    lastReminderAt: null,
+    nextReminderDate: null,
+  };
+
+  it("passe en retard les factures échues et les relance", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base }], now);
+    expect(result.toMarkOverdue).toEqual([1]);
+    expect(result.toRemind).toEqual([1]);
+  });
+
+  it("laisse tranquille une facture non échue", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base, dueDate: "2026-09-30" }], now);
+    expect(result.toMarkOverdue).toEqual([]);
+    expect(result.toRemind).toEqual([]);
+  });
+
+  it("ignore une facture réglée, même échue", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base, paidAt: "2026-09-02" }], now);
+    expect(result.toRemind).toEqual([]);
+  });
+
+  it("ignore un brouillon : rien n'a encore été adressé au client", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base, status: "Brouillon" }], now);
+    expect(result.toMarkOverdue).toEqual([]);
+    expect(result.toRemind).toEqual([]);
+  });
+
+  it("ne change pas le statut d'une facture déjà en retard mais la relance encore", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base, status: "En Retard" }], now);
+    expect(result.toMarkOverdue).toEqual([]);
+    expect(result.toRemind).toEqual([1]);
+  });
+
+  it("attend la date de relance prévue", () => {
+    const result = planInvoiceReminders(
+      [{ id: 1, ...base, status: "En Retard", reminderCount: 1, nextReminderDate: "2026-09-20" }],
+      now
+    );
+    expect(result.toRemind).toEqual([]);
+  });
+
+  it("relance dès que la date prévue est atteinte", () => {
+    const result = planInvoiceReminders(
+      [{ id: 1, ...base, status: "En Retard", reminderCount: 1, nextReminderDate: "2026-09-15" }],
+      now
+    );
+    expect(result.toRemind).toEqual([1]);
+  });
+
+  it("s'arrête après trois rappels : la suite relève d'une décision humaine", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base, status: "En Retard", reminderCount: 3 }], now);
+    expect(result.toRemind).toEqual([]);
+  });
+
+  it("n'écrit pas deux fois le même jour, même si le traitement est rejoué", () => {
+    const result = planInvoiceReminders(
+      [{ id: 1, ...base, status: "En Retard", reminderCount: 1, lastReminderAt: new Date("2026-09-15T06:00:00Z") }],
+      now
+    );
+    expect(result.toRemind).toEqual([]);
+  });
+
+  it("ignore une facture échue sans date d'échéance", () => {
+    const result = planInvoiceReminders([{ id: 1, ...base, dueDate: null }], now);
+    expect(result.toMarkOverdue).toEqual([]);
+    expect(result.toRemind).toEqual([]);
   });
 });

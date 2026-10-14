@@ -24,6 +24,7 @@ import SupportTicketDetail from "./pages/SupportTicketDetail";
 import SupportTickets from "./pages/SupportTickets";
 import DirectionDashboard from "./pages/DirectionDashboard";
 import DirectionExports from "./pages/DirectionExports";
+import Automations from "./pages/Automations";
 import DirectionReport from "./pages/DirectionReport";
 import MarketingDashboard from "./pages/MarketingDashboard";
 import MarketingCampaigns from "./pages/MarketingCampaigns";
@@ -31,6 +32,7 @@ import MarketingCampaignDetail from "./pages/MarketingCampaignDetail";
 import MarketingCalendar from "./pages/MarketingCalendar";
 import MarketingLeads from "./pages/MarketingLeads";
 import MarketingLibrary from "./pages/MarketingLibrary";
+import EmailTemplates from "./pages/EmailTemplates";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import Expenses from "./pages/Expenses";
 import BankTransactions from "./pages/BankTransactions";
@@ -70,6 +72,7 @@ function Router() {
     <Route path="/finance/depenses" component={Expenses} />
     <Route path="/finance/rapprochement" component={BankTransactions} />
     <Route path="/finance/export" component={FinanceExports} />
+    <Route path="/messages" component={EmailTemplates} />
     <Route path="/juridique" component={Legal} />
     <Route path="/fournisseurs" component={Suppliers} />
     <Route path="/rh" component={Team} />
@@ -82,6 +85,7 @@ function Router() {
     <Route path="/direction/support"><DirectionReport pole="support" /></Route>
     <Route path="/direction/marketing"><DirectionReport pole="marketing" /></Route>
     <Route path="/direction/exports" component={DirectionExports} />
+    <Route path="/direction/automatisations" component={Automations} />
     <Route component={NotFound} />
   </Switch></DashboardLayout>;
 }

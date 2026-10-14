@@ -165,12 +165,12 @@ describe("permissions Base de connaissances", () => {
 
   it("laisse chacun lire et rédiger", async () => {
     await expect(as("support" as Role).knowledge.list()).resolves.toEqual([]);
-    await as("commercial", 9).knowledge.create({ title: "Argumentaire", category: "Commercial", content: "Contenu suffisant." });
+    await as("commercial", 9).knowledge.create({ title: "Argumentaire", category: "COM", content: "Contenu suffisant." });
     expect(gov.createArticle).toHaveBeenCalledWith(expect.objectContaining({ authorId: 9 }));
   });
 
   it("réserve la modification à l’auteur, à l’administration et à la direction", async () => {
-    vi.mocked(gov.getArticle).mockResolvedValue({ id: 5, authorId: 9, title: "T", category: "General", content: "c", authorName: null, createdAt: new Date(), updatedAt: new Date() } as any);
+    vi.mocked(gov.getArticle).mockResolvedValue({ id: 5, authorId: 9, title: "T", category: "INT", content: "c", authorName: null, createdAt: new Date(), updatedAt: new Date() } as any);
 
     await expect(as("commercial", 4).knowledge.update({ id: 5, title: "Nouveau titre" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(as("commercial", 9).knowledge.update({ id: 5, title: "Nouveau titre" })).resolves.toEqual({ success: true });
