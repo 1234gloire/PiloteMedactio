@@ -8,6 +8,7 @@ import {
   marketingLeads,
   organizations,
 } from "../drizzle/schema";
+import { attachToInteraction, claimAttachments, loadAttachmentsForSending } from "./email.attachments";
 import { requireDb } from "./db";
 import { sendMail } from "./_core/mailer";
 
@@ -153,6 +154,8 @@ export type ComposeInput = {
   body: string;
   /** Opportunité à laquelle rattacher l'échange, le cas échéant. */
   dealId?: number | null;
+  /** Pièces déjà téléversées à joindre au message. */
+  attachmentIds?: number[];
 };
 
 /**
@@ -183,27 +186,45 @@ export async function composeAndSend(input: ComposeInput, author: typeof interna
   const subject = applyVariables(input.subject, variables).trim();
   const body = applyVariables(input.body, variables).trim();
 
+  // Les pièces sont réservées avant l'envoi : mieux vaut refuser un document
+  // introuvable que partir sans lui à l'insu de l'expéditeur.
+  const attachmentIds = input.attachmentIds ?? [];
+  const claimed = await claimAttachments(attachmentIds, author.id);
+  const attachments = await loadAttachmentsForSending(claimed);
+
   const result = await sendMail({
     to: recipient.email,
     toName: recipient.name,
     subject,
     text: body,
     replyTo: author.email,
+    attachments,
   });
 
   if (!result.sent) return { sent: false as const, reason: result.reason };
 
   // L'objet est conservé dans le journal : relire « Relance devis » des mois
-  // plus tard est plus parlant que le seul corps du message.
-  await db.insert(interactions).values({
-    dealId: input.dealId ?? null,
-    contactId: recipient.contactId ?? null,
-    createdBy: author.id,
-    type: "Email",
-    content: `Objet : ${subject}\n\n${body}`,
-  });
+  // plus tard est plus parlant que le seul corps du message. Les pièces sont
+  // nommées, pour qu'on sache des mois après ce qui a été transmis.
+  const joined = claimed.length
+    ? `\n\nPièces jointes : ${claimed.map(file => file.fileName).join(", ")}`
+    : "";
+  const interaction = (
+    await db
+      .insert(interactions)
+      .values({
+        dealId: input.dealId ?? null,
+        contactId: recipient.contactId ?? null,
+        createdBy: author.id,
+        type: "Email",
+        content: `Objet : ${subject}\n\n${body}${joined}`,
+      })
+      .returning({ id: interactions.id })
+  )[0];
 
-  return { sent: true as const, to: recipient.email, subject };
+  await attachToInteraction(attachmentIds, interaction.id);
+
+  return { sent: true as const, to: recipient.email, subject, attachments: claimed.length };
 }
 
 /** Contacts joignables d'un établissement, pour le choix du destinataire. */

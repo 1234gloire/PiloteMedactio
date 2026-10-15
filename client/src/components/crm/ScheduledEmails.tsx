@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { CalendarClock, X } from "lucide-react";
+import { CalendarClock, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "./Common";
 
@@ -96,7 +96,15 @@ export function ScheduledEmailsCard({
               return (
                 <div key={item.id} className="flex items-start gap-3 rounded-xl border border-slate-100 p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">{item.subject}</p>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                      <span className="truncate">{item.subject}</span>
+                      {item.attachments ? (
+                        <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-normal text-muted-foreground"
+                          title={`${item.attachments} pièce${item.attachments > 1 ? "s" : ""} jointe${item.attachments > 1 ? "s" : ""}`}>
+                          <Paperclip className="h-3 w-3" />{item.attachments}
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {item.toName || item.toEmail} · {item.status === "Envoye" ? `envoyé ${formatDate(item.sentAt, true)}` : formatDate(item.sendAt, true)}
                       {item.trigger ? ` · ${triggerLabel(item.trigger)}` : " · programmé à la main"}

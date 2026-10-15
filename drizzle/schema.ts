@@ -715,6 +715,29 @@ export const scheduledEmails = pgTable("scheduled_emails", {
   index("scheduled_emails_ticket_idx").on(table.ticketId),
 ]);
 
+/**
+ * Pièces jointes des messages rédigés depuis la plateforme.
+ *
+ * Le fichier va dans le compartiment de stockage ; seule sa clé est en base.
+ * Le rattachement dit où en est la pièce : à un envoi programmé tant qu'il
+ * attend, à l'échange une fois le message parti. Sans rattachement, c'est un
+ * brouillon — un fichier téléversé dans une fenêtre refermée sans envoi.
+ */
+export const emailAttachments = pgTable("email_attachments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  storageKey: varchar("storageKey", { length: 512 }).notNull(),
+  fileName: varchar("fileName", { length: 240 }).notNull(),
+  mimeType: varchar("mimeType", { length: 160 }).notNull(),
+  sizeBytes: integer("sizeBytes").notNull(),
+  scheduledEmailId: integer("scheduledEmailId").references(() => scheduledEmails.id, { onDelete: "cascade" }),
+  interactionId: integer("interactionId").references(() => interactions.id, { onDelete: "cascade" }),
+  createdBy: integer("createdBy").references(() => internalUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+}, table => [
+  index("email_attachments_scheduled_idx").on(table.scheduledEmailId),
+  index("email_attachments_interaction_idx").on(table.interactionId),
+]);
+
 export const notifications = pgTable("notifications", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId")
@@ -895,3 +918,4 @@ export type Invoice = typeof invoices.$inferSelect;
 export type EstablishmentContract = typeof establishmentContracts.$inferSelect;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type Automation = typeof automations.$inferSelect;
+export type EmailAttachment = typeof emailAttachments.$inferSelect;

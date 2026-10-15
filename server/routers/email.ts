@@ -5,6 +5,7 @@ import * as db from "../db";
 import * as emailDb from "../email.db";
 import * as emailAuto from "../email.automation";
 import { emailTriggers, knowledgeCategories } from "../../drizzle/schema";
+import * as attachments from "../email.attachments";
 import { isMailConfigured } from "../_core/mailer";
 
 type Ctx = { user: NonNullable<Parameters<typeof db.ensureInternalProfile>[0]> };
@@ -27,6 +28,15 @@ async function requireWriter(ctx: Ctx) {
 // Les modèles suivent le classement des procédures, pour éviter deux
 // taxonomies concurrentes.
 const categories = knowledgeCategories;
+
+/**
+ * Pièces déjà téléversées à joindre. Seuls les identifiants circulent : le
+ * contenu est monté une seule fois, à la sélection du fichier.
+ */
+const attachmentIdsInput = z
+  .array(z.number().int().positive())
+  .max(attachments.ATTACHMENT_MAX_COUNT)
+  .optional();
 
 const recipientInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("contact"), id: z.number().int().positive() }),
@@ -103,11 +113,18 @@ export const emailRouter = router({
       subject: z.string().trim().min(2).max(240),
       body: z.string().trim().min(5).max(20_000),
       dealId: z.number().int().positive().optional().nullable(),
+      attachmentIds: attachmentIdsInput,
     }))
     .mutation(async ({ ctx, input }) => {
       const profile = await requireWriter(ctx);
       const result = await emailDb.composeAndSend(
-        { recipient: input.recipient, subject: input.subject, body: input.body, dealId: input.dealId ?? null },
+        {
+          recipient: input.recipient,
+          subject: input.subject,
+          body: input.body,
+          dealId: input.dealId ?? null,
+          attachmentIds: input.attachmentIds ?? [],
+        },
         profile
       );
       if (!result.sent) {
@@ -128,6 +145,7 @@ export const emailRouter = router({
       body: z.string().trim().min(5).max(20_000),
       dealId: z.number().int().positive().optional().nullable(),
       sendAt: z.coerce.date(),
+      attachmentIds: attachmentIdsInput,
     }))
     .mutation(async ({ ctx, input }) => {
       const profile = await requireWriter(ctx);
@@ -156,6 +174,37 @@ export const emailRouter = router({
       .mutation(async ({ ctx, input }) => {
         await requireWriter(ctx);
         return emailAuto.cancelScheduled(input.id);
+      }),
+  }),
+
+  /**
+   * Pièces jointes. Le fichier est monté dès sa sélection, avant la rédaction
+   * du message : l'attente se fait pendant qu'on écrit, pas à l'envoi.
+   */
+  attachments: router({
+    limits: protectedProcedure.query(() => ({
+      maxBytes: attachments.ATTACHMENT_MAX_BYTES,
+      totalMaxBytes: attachments.ATTACHMENT_TOTAL_MAX_BYTES,
+      maxCount: attachments.ATTACHMENT_MAX_COUNT,
+      allowed: attachments.allowedAttachmentLabel,
+    })),
+
+    upload: protectedProcedure
+      .input(z.object({
+        fileName: z.string().trim().min(1).max(240),
+        mimeType: z.string().trim().min(1).max(160),
+        base64: z.string().min(1).max(11_500_000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await requireWriter(ctx);
+        return attachments.uploadAttachment(input, profile.id);
+      }),
+
+    discard: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await requireWriter(ctx);
+        return attachments.discardAttachment(input.id, profile.id);
       }),
   }),
 

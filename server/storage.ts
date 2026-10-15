@@ -75,6 +75,22 @@ export async function storagePut(
 }
 
 /**
+ * Relit un fichier déjà stocké.
+ *
+ * Nécessaire pour joindre une pièce à un email : Mailjet attend le contenu,
+ * pas une URL — et une URL signée expirerait avant l'envoi d'une relance
+ * programmée à plusieurs jours.
+ */
+export async function storageRead(key: string): Promise<Buffer> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return localStorageRead(normalizeKey(key));
+
+  const { data, error } = await supabase.storage.from(STORAGE_BUCKET).download(normalizeKey(key));
+  if (error || !data) throw new Error(`Lecture du fichier impossible : ${error?.message ?? "fichier absent"}`);
+  return Buffer.from(await data.arrayBuffer());
+}
+
+/**
  * URL de consultation d'un document, valable une heure.
  * Renvoie `null` si la clé est absente ou si la signature échoue.
  */

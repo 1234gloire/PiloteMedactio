@@ -13,6 +13,13 @@
 const MAILJET_ENDPOINT = "https://api.mailjet.com/v3.1/send";
 const TIMEOUT_MS = 10_000;
 
+/**
+ * Délai élargi dès qu'un message porte des pièces jointes : le téléversement
+ * vers Mailjet prend le temps que pèse le document, et abandonner à dix
+ * secondes ferait échouer l'envoi d'un simple PDF de quelques mégaoctets.
+ */
+const TIMEOUT_WITH_ATTACHMENTS_MS = 60_000;
+
 export type MailResult = { sent: boolean; reason?: string };
 
 export type MailInput = {
@@ -27,6 +34,8 @@ export type MailInput = {
    * revienne au collaborateur qui a écrit, et non à une boîte collective.
    */
   replyTo?: string | null;
+  /** Pièces jointes, contenu déjà encodé en base64. */
+  attachments?: { fileName: string; mimeType: string; base64: string }[];
 };
 
 function config() {
@@ -90,7 +99,10 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   if (!settings) return { sent: false, reason: "Mailjet n’est pas configuré." };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    input.attachments?.length ? TIMEOUT_WITH_ATTACHMENTS_MS : TIMEOUT_MS
+  );
 
   try {
     const response = await fetch(MAILJET_ENDPOINT, {
@@ -108,6 +120,15 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
             Subject: input.subject,
             TextPart: input.text,
             HTMLPart: input.html ?? wrapHtml(input.subject, input.text),
+            ...(input.attachments?.length
+              ? {
+                  Attachments: input.attachments.map(file => ({
+                    ContentType: file.mimeType || "application/octet-stream",
+                    Filename: file.fileName,
+                    Base64Content: file.base64,
+                  })),
+                }
+              : {}),
           },
         ],
       }),

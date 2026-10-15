@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { CalendarClock, Loader2, Mail, Send } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { CalendarClock, Loader2, Mail, Paperclip, Send, X } from "lucide-react";
+import { FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import { labelFor } from "./Common";
 
@@ -29,6 +29,24 @@ function tomorrowAtNine() {
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Une erreur est survenue.";
 }
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Poids d'un fichier, dans l'unité qui se lit le mieux. */
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+}
+
+type Attached = { id: number; fileName: string; sizeBytes: number };
 
 /**
  * Rédaction et envoi d'un message depuis la plateforme.
@@ -58,13 +76,69 @@ export function EmailComposer({
   const [templateId, setTemplateId] = useState("none");
   const [later, setLater] = useState(false);
   const [sendAt, setSendAt] = useState(tomorrowAtNine);
+  const [attached, setAttached] = useState<Attached[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const status = trpc.email.status.useQuery(undefined, { enabled: open });
   const templates = trpc.email.templates.list.useQuery(undefined, { enabled: open });
+  const limits = trpc.email.attachments.limits.useQuery(undefined, { enabled: open });
+  const upload = trpc.email.attachments.upload.useMutation();
+  const discard = trpc.email.attachments.discard.useMutation();
   const send = trpc.email.send.useMutation();
   const schedule = trpc.email.schedule.useMutation();
   const utils = trpc.useUtils();
   const pending = send.isPending || schedule.isPending;
+
+  const totalBytes = attached.reduce((sum, file) => sum + file.sizeBytes, 0);
+
+  /**
+   * Le fichier est monté dès qu'il est choisi : l'attente a lieu pendant la
+   * rédaction, et non au moment d'envoyer. Chaque fichier est traité à son
+   * tour, afin que le nom affiché soit celui qui monte réellement.
+   */
+  const pickFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const maxCount = limits.data?.maxCount ?? 10;
+    const totalMax = limits.data?.totalMaxBytes ?? 12 * 1024 * 1024;
+
+    for (const file of Array.from(files)) {
+      if (attached.length >= maxCount) {
+        toast.error(`Pas plus de ${maxCount} pièces jointes par message.`);
+        break;
+      }
+      setUploading(file.name);
+      try {
+        const base64 = await fileToBase64(file);
+        const result = await upload.mutateAsync({
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          base64,
+        });
+        setAttached(current => {
+          const next = [...current, result];
+          if (next.reduce((sum, item) => sum + item.sizeBytes, 0) > totalMax) {
+            toast.error(`Les pièces jointes dépassent ${Math.round(totalMax / 1024 / 1024)} Mo au total.`);
+            void discard.mutateAsync({ id: result.id }).catch(() => undefined);
+            return current;
+          }
+          return next;
+        });
+      } catch (error) {
+        toast.error(errorMessage(error));
+      } finally {
+        setUploading(null);
+      }
+    }
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
+  const removeFile = async (id: number) => {
+    setAttached(current => current.filter(file => file.id !== id));
+    // Le fichier est effacé du stockage ; un échec ici est sans conséquence,
+    // le ménage quotidien s'en chargera.
+    await discard.mutateAsync({ id }).catch(() => undefined);
+  };
 
   const applyTemplate = (value: string) => {
     setTemplateId(value);
@@ -81,14 +155,14 @@ export function EmailComposer({
     try {
       if (later) {
         // datetime-local est en heure locale : new Date() la convertit avant l'envoi au serveur.
-        const result = await schedule.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, sendAt: new Date(sendAt) });
+        const result = await schedule.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, sendAt: new Date(sendAt), attachmentIds: attached.map(file => file.id) });
         await utils.email.scheduled.list.invalidate();
         toast.success(`Envoi programmé pour ${result.to} le ${new Date(result.sendAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}.`);
       } else {
-        const result = await send.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null });
-        toast.success(`Message envoyé à ${result.to}.`);
+        const result = await send.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, attachmentIds: attached.map(file => file.id) });
+        toast.success(`Message envoyé à ${result.to}${result.attachments ? ` avec ${result.attachments} pièce${result.attachments > 1 ? "s" : ""} jointe${result.attachments > 1 ? "s" : ""}` : ""}.`);
       }
-      setSubject(""); setBody(""); setTemplateId("none"); setLater(false);
+      setSubject(""); setBody(""); setTemplateId("none"); setLater(false); setAttached([]);
       onSent?.();
       onOpenChange(false);
     } catch (error) {
@@ -145,6 +219,55 @@ export function EmailComposer({
                 Variables remplacées à l’envoi : <code>{"{{contact}}"}</code>, <code>{"{{etablissement}}"}</code>,{" "}
                 <code>{"{{expediteur}}"}</code>, <code>{"{{poste}}"}</code>.
               </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                  <Paperclip className="h-4 w-4 text-teal-700" />
+                  Pièces jointes
+                  {attached.length ? (
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {attached.length} fichier{attached.length > 1 ? "s" : ""} · {formatSize(totalBytes)}
+                    </span>
+                  ) : null}
+                </div>
+                <Button type="button" size="sm" variant="outline" className="bg-white"
+                  disabled={Boolean(uploading)} onClick={() => fileInput.current?.click()}>
+                  {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Paperclip className="mr-2 h-4 w-4" />}
+                  Joindre un document
+                </Button>
+              </div>
+
+              <input ref={fileInput} type="file" multiple className="hidden"
+                onChange={e => void pickFiles(e.target.files)} />
+
+              {attached.length ? (
+                <ul className="mt-3 space-y-2">
+                  {attached.map(file => (
+                    <li key={file.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-slate-800">{file.fileName}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{formatSize(file.sizeBytes)}</span>
+                      <button type="button" onClick={() => void removeFile(file.id)}
+                        aria-label={`Retirer ${file.fileName}`}
+                        className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {uploading ? (
+                <p className="mt-2 text-xs text-muted-foreground">Téléversement de « {uploading} »…</p>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {limits.data
+                    ? `Jusqu’à ${limits.data.maxCount} fichiers, ${Math.round(limits.data.maxBytes / 1024 / 1024)} Mo chacun et ${Math.round(limits.data.totalMaxBytes / 1024 / 1024)} Mo au total. Formats : ${limits.data.allowed}.`
+                    : "Documents, tableurs, présentations et images."}
+                </p>
+              )}
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">

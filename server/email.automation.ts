@@ -10,6 +10,15 @@ import {
   supportTicketEvents,
   supportTickets,
 } from "../drizzle/schema";
+import {
+  attachToInteraction,
+  attachToScheduled,
+  attachmentsOfScheduled,
+  claimAttachments,
+  countAttachmentsByScheduled,
+  purgeOrphanAttachments,
+  loadAttachmentsForSending,
+} from "./email.attachments";
 import { requireDb } from "./db";
 import { applyVariables, resolveRecipient, type MessageVariables, type RecipientRef } from "./email.db";
 import { dealTrigger, MAX_SEND_ATTEMPTS, relanceSendAt, ticketTrigger, type EmailTrigger } from "./email.logic";
@@ -98,7 +107,8 @@ async function authorEmail(authorId: number | null | undefined) {
 
 /**
  * Inscrit l'envoi à l'historique : au fil du ticket pour le support, aux
- * échanges du contact pour le commercial.
+ * échanges du contact pour le commercial. Renvoie l'identifiant de l'échange
+ * créé, auquel rattacher les pièces jointes.
  */
 async function logSent(input: {
   subject: string;
@@ -108,23 +118,33 @@ async function logSent(input: {
   ticketId: number | null;
   authorId: number | null;
   automatic: boolean;
+  attachmentNames?: string[];
 }) {
   const db = await requireDb();
-  await db.insert(interactions).values({
-    dealId: input.dealId,
-    contactId: input.contactId,
-    createdBy: input.authorId,
-    type: "Email",
-    content: `Objet : ${input.subject}\n\n${input.body}`,
-  });
+  const joined = input.attachmentNames?.length
+    ? `\n\nPièces jointes : ${input.attachmentNames.join(", ")}`
+    : "";
+  const interaction = (
+    await db
+      .insert(interactions)
+      .values({
+        dealId: input.dealId,
+        contactId: input.contactId,
+        createdBy: input.authorId,
+        type: "Email",
+        content: `Objet : ${input.subject}\n\n${input.body}${joined}`,
+      })
+      .returning({ id: interactions.id })
+  )[0];
   if (input.ticketId) {
     await db.insert(supportTicketEvents).values({
       ticketId: input.ticketId,
       authorId: input.authorId,
       eventType: "Relance Client",
-      content: `${input.automatic ? "Email automatique envoyé" : "Email programmé envoyé"} au demandeur : « ${input.subject} ».`,
+      content: `${input.automatic ? "Email automatique envoyé" : "Email programmé envoyé"} au demandeur : « ${input.subject} »${input.attachmentNames?.length ? ` (${input.attachmentNames.length} pièce${input.attachmentNames.length > 1 ? "s" : ""} jointe${input.attachmentNames.length > 1 ? "s" : ""})` : ""}.`,
     });
   }
+  return interaction?.id ?? null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -234,7 +254,14 @@ export async function onDealStageChanged(dealId: number, stage: string, authorId
 /* ------------------------------------------------------------------ */
 
 export async function scheduleManual(
-  input: { recipient: RecipientRef; subject: string; body: string; sendAt: Date; dealId?: number | null },
+  input: {
+    recipient: RecipientRef;
+    subject: string;
+    body: string;
+    sendAt: Date;
+    dealId?: number | null;
+    attachmentIds?: number[];
+  },
   author: typeof internalUsers.$inferSelect
 ) {
   const recipient = await resolveRecipient(input.recipient);
@@ -248,6 +275,11 @@ export async function scheduleManual(
   };
   const subject = applyVariables(input.subject, variables).trim();
   const body = applyVariables(input.body, variables).trim();
+
+  // Les pièces sont vérifiées maintenant : un document manquant doit être
+  // signalé à la rédaction, pas découvert au moment de l'envoi.
+  const attachmentIds = input.attachmentIds ?? [];
+  const claimed = await claimAttachments(attachmentIds, author.id);
 
   const db = await requireDb();
   const result = await db
@@ -263,10 +295,26 @@ export async function scheduleManual(
       createdBy: author.id,
     })
     .returning({ id: scheduledEmails.id });
-  return { scheduled: true as const, id: result[0].id, to: recipient.email, sendAt: input.sendAt };
+
+  await attachToScheduled(attachmentIds, result[0].id);
+
+  return {
+    scheduled: true as const,
+    id: result[0].id,
+    to: recipient.email,
+    sendAt: input.sendAt,
+    attachments: claimed.length,
+  };
 }
 
 export async function listScheduled(input?: { dealId?: number; ticketId?: number; pendingOnly?: boolean }) {
+  const rows = await listScheduledRows(input);
+  // Le trombone de la liste a besoin du compte, pas du contenu des pièces.
+  const counts = await countAttachmentsByScheduled(rows.map(row => row.id));
+  return rows.map(row => ({ ...row, attachments: counts.get(row.id) ?? 0 }));
+}
+
+async function listScheduledRows(input?: { dealId?: number; ticketId?: number; pendingOnly?: boolean }) {
   const db = await requireDb();
   const conditions: SQL[] = [];
   if (input?.dealId) conditions.push(eq(scheduledEmails.dealId, input.dealId));
@@ -338,18 +386,40 @@ export async function processDueEmails(now = new Date()) {
     if (!claimed.length) continue;
 
     if (item.createdBy && !authorEmails.has(item.createdBy)) authorEmails.set(item.createdBy, await authorEmail(item.createdBy));
+
+    // Les pièces sont relues au moment de l'envoi : un document de plusieurs
+    // mégaoctets n'a pas à encombrer la file pendant des jours.
+    const joined = await attachmentsOfScheduled(item.id);
+    let attachments: Awaited<ReturnType<typeof loadAttachmentsForSending>> = [];
+    try {
+      attachments = await loadAttachmentsForSending(joined);
+    } catch (error) {
+      // Pièce devenue illisible : l'envoi est mis en échec plutôt qu'expédié
+      // amputé du document qui en faisait tout l'objet.
+      failed += 1;
+      await db
+        .update(scheduledEmails)
+        .set({
+          status: "Echec",
+          lastError: error instanceof Error ? error.message : "Pièce jointe illisible.",
+        })
+        .where(eq(scheduledEmails.id, item.id));
+      continue;
+    }
+
     const result = await sendMail({
       to: item.toEmail,
       toName: item.toName,
       subject: item.subject,
       text: item.body,
       replyTo: item.createdBy ? authorEmails.get(item.createdBy) : null,
+      attachments,
     });
 
     if (result.sent) {
       sent += 1;
       await db.update(scheduledEmails).set({ status: "Envoye", sentAt: new Date(), lastError: null }).where(eq(scheduledEmails.id, item.id));
-      await logSent({
+      const interactionId = await logSent({
         subject: item.subject,
         body: item.body,
         contactId: item.contactId,
@@ -357,7 +427,11 @@ export async function processDueEmails(now = new Date()) {
         ticketId: item.ticketId,
         authorId: item.createdBy,
         automatic: Boolean(item.trigger),
+        attachmentNames: joined.map(file => file.fileName),
       });
+      // La pièce reste rattachée à l'envoi programmé et rejoint l'échange :
+      // l'historique du contact montre ce qui lui a été transmis.
+      if (interactionId) await attachToInteraction(joined.map(file => file.id), interactionId);
     } else {
       failed += 1;
       const exhausted = item.attempts + 1 >= MAX_SEND_ATTEMPTS;
@@ -368,5 +442,12 @@ export async function processDueEmails(now = new Date()) {
     }
   }
 
-  return { due: due.length, sent, failed };
+  // Le même passage fait le ménage : les fichiers téléversés dans une fenêtre
+  // refermée sans envoi n'ont pas à rester en stockage.
+  const purged = await purgeOrphanAttachments(now).catch(error => {
+    console.error("[Emails programmés] Ménage des pièces jointes", error);
+    return 0;
+  });
+
+  return { due: due.length, sent, failed, purged };
 }
