@@ -9,6 +9,7 @@ import {
   organizations,
 } from "../drizzle/schema";
 import { attachToInteraction, claimAttachments, loadAttachmentsForSending } from "./email.attachments";
+import { resolveSender } from "./email.senders";
 import { requireDb } from "./db";
 import { sendMail } from "./_core/mailer";
 
@@ -156,6 +157,8 @@ export type ComposeInput = {
   dealId?: number | null;
   /** Pièces déjà téléversées à joindre au message. */
   attachmentIds?: number[];
+  /** Boîte d'expédition choisie à la rédaction. */
+  senderKey?: string | null;
 };
 
 /**
@@ -192,6 +195,10 @@ export async function composeAndSend(input: ComposeInput, author: typeof interna
   const claimed = await claimAttachments(attachmentIds, author.id);
   const attachments = await loadAttachmentsForSending(claimed);
 
+  // Le choix de la boîte est revérifié ici : l'interface le propose, le
+  // serveur l'autorise.
+  const sender = resolveSender(input.senderKey, author.role);
+
   const result = await sendMail({
     to: recipient.email,
     toName: recipient.name,
@@ -199,6 +206,7 @@ export async function composeAndSend(input: ComposeInput, author: typeof interna
     text: body,
     replyTo: author.email,
     attachments,
+    from: sender,
   });
 
   if (!result.sent) return { sent: false as const, reason: result.reason };
@@ -224,7 +232,7 @@ export async function composeAndSend(input: ComposeInput, author: typeof interna
 
   await attachToInteraction(attachmentIds, interaction.id);
 
-  return { sent: true as const, to: recipient.email, subject, attachments: claimed.length };
+  return { sent: true as const, to: recipient.email, subject, attachments: claimed.length, from: sender.email };
 }
 
 /** Contacts joignables d'un établissement, pour le choix du destinataire. */

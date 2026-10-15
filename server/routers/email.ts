@@ -6,6 +6,7 @@ import * as emailDb from "../email.db";
 import * as emailAuto from "../email.automation";
 import { emailTriggers, knowledgeCategories } from "../../drizzle/schema";
 import * as attachments from "../email.attachments";
+import { defaultSenderKey, sendersForRole } from "../email.senders";
 import { isMailConfigured } from "../_core/mailer";
 
 type Ctx = { user: NonNullable<Parameters<typeof db.ensureInternalProfile>[0]> };
@@ -49,6 +50,18 @@ export const emailRouter = router({
   status: protectedProcedure.query(async ({ ctx }) => {
     const profile = await db.ensureInternalProfile(ctx.user);
     return { configured: isMailConfigured(), canWrite: WRITERS.includes(profile.role), from: profile.email };
+  }),
+
+  /**
+   * Boîtes d'expédition ouvertes au rôle du collaborateur, et celle proposée
+   * par défaut — celle de son équipe.
+   */
+  senders: protectedProcedure.query(async ({ ctx }) => {
+    const profile = await db.ensureInternalProfile(ctx.user);
+    return {
+      available: sendersForRole(profile.role).map(({ key, email, label }) => ({ key, email, label })),
+      defaultKey: defaultSenderKey(profile.role),
+    };
   }),
 
   templates: router({
@@ -114,6 +127,7 @@ export const emailRouter = router({
       body: z.string().trim().min(5).max(20_000),
       dealId: z.number().int().positive().optional().nullable(),
       attachmentIds: attachmentIdsInput,
+      senderKey: z.string().max(32).optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
       const profile = await requireWriter(ctx);
@@ -124,6 +138,7 @@ export const emailRouter = router({
           body: input.body,
           dealId: input.dealId ?? null,
           attachmentIds: input.attachmentIds ?? [],
+          senderKey: input.senderKey ?? null,
         },
         profile
       );
@@ -146,6 +161,7 @@ export const emailRouter = router({
       dealId: z.number().int().positive().optional().nullable(),
       sendAt: z.coerce.date(),
       attachmentIds: attachmentIdsInput,
+      senderKey: z.string().max(32).optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
       const profile = await requireWriter(ctx);

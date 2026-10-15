@@ -15,6 +15,7 @@ import {
 } from "../drizzle/schema";
 import { getAutomation, setAutomationEnabled } from "./automations.db";
 import { onTicketStatusChanged, ticketRecipient, type TriggerResult } from "./email.automation";
+import { senderByKey } from "./email.senders";
 import { requireDb } from "./db";
 import { sendMail } from "./_core/mailer";
 import { storagePut, storageUrlFor } from "./storage";
@@ -152,6 +153,7 @@ export async function updateTicket(id: number, data: Partial<typeof supportTicke
       const recipient = await ticketRecipient(current);
       if (recipient) {
         const result = await sendMail({
+          from: senderByKey("support"),
           to: recipient.email,
           toName: recipient.name,
           subject: `Votre demande a été traitée — ${current.title}`,
@@ -194,6 +196,7 @@ export async function addTicketEvent(data: typeof supportTicketEvents.$inferInse
     const recipient = await ticketRecipient(ticket);
     mail = recipient
       ? await sendMail({
+          from: senderByKey("support"),
           to: recipient.email,
           toName: recipient.name,
           subject: `Votre demande d’assistance — ${ticket.title}`,
@@ -334,6 +337,7 @@ export async function remindInvoice(id: number, userId?: number | null) {
   const overdue = Number(daysUntil(invoice.dueDate, now)) < 0;
 
   const mail = await sendMail({
+    from: senderByKey("secretariat"),
     to: recipient.email,
     toName: recipient.fullName,
     subject: `Facture ${invoice.invoiceNumber} — ${overdue ? "en attente de règlement" : "rappel d’échéance"}`,

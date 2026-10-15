@@ -19,6 +19,7 @@ import {
   purgeOrphanAttachments,
   loadAttachmentsForSending,
 } from "./email.attachments";
+import { automaticSenderKey, resolveSender, senderByKey } from "./email.senders";
 import { requireDb } from "./db";
 import { applyVariables, resolveRecipient, type MessageVariables, type RecipientRef } from "./email.db";
 import { dealTrigger, MAX_SEND_ATTEMPTS, relanceSendAt, ticketTrigger, type EmailTrigger } from "./email.logic";
@@ -176,12 +177,18 @@ async function fireTrigger(trigger: EmailTrigger, target: Target, authorId: numb
   let scheduled = 0;
   let reason: string | undefined;
 
+  // Un envoi automatique n'a pas de rédacteur qui choisirait sa boîte : elle
+  // découle de ce qui le déclenche — un incident part du support, une relance
+  // commerciale du commercial.
+  const senderKey = automaticSenderKey(target.kind);
+  const sender = senderByKey(senderKey);
+
   for (const template of templates) {
     const subject = applyVariables(template.subject, variables).trim();
     const body = applyVariables(template.body, variables).trim();
 
     if (template.delayDays <= 0) {
-      const result = await sendMail({ to: recipient.email, toName: recipient.name, subject, text: body, replyTo });
+      const result = await sendMail({ to: recipient.email, toName: recipient.name, subject, text: body, replyTo, from: sender });
       if (result.sent) {
         sent += 1;
         await logSent({ subject, body, contactId: recipient.contactId, dealId, ticketId, authorId, automatic: true });
@@ -202,6 +209,7 @@ async function fireTrigger(trigger: EmailTrigger, target: Target, authorId: numb
       subject,
       body,
       sendAt: relanceSendAt(now, template.delayDays),
+      senderKey,
       createdBy: authorId,
     });
     scheduled += 1;
@@ -261,6 +269,7 @@ export async function scheduleManual(
     sendAt: Date;
     dealId?: number | null;
     attachmentIds?: number[];
+    senderKey?: string | null;
   },
   author: typeof internalUsers.$inferSelect
 ) {
@@ -281,6 +290,10 @@ export async function scheduleManual(
   const attachmentIds = input.attachmentIds ?? [];
   const claimed = await claimAttachments(attachmentIds, author.id);
 
+  // La boîte est validée maintenant, pas au moment de l'envoi : un refus doit
+  // se voir à la rédaction.
+  const sender = resolveSender(input.senderKey, author.role);
+
   const db = await requireDb();
   const result = await db
     .insert(scheduledEmails)
@@ -292,6 +305,7 @@ export async function scheduleManual(
       subject,
       body,
       sendAt: input.sendAt,
+      senderKey: sender.key,
       createdBy: author.id,
     })
     .returning({ id: scheduledEmails.id });
@@ -304,6 +318,7 @@ export async function scheduleManual(
     to: recipient.email,
     sendAt: input.sendAt,
     attachments: claimed.length,
+    from: sender.email,
   };
 }
 
@@ -330,6 +345,7 @@ async function listScheduledRows(input?: { dealId?: number; ticketId?: number; p
       sendAt: scheduledEmails.sendAt,
       status: scheduledEmails.status,
       trigger: scheduledEmails.trigger,
+      senderKey: scheduledEmails.senderKey,
       lastError: scheduledEmails.lastError,
       sentAt: scheduledEmails.sentAt,
       dealId: scheduledEmails.dealId,
@@ -414,6 +430,7 @@ export async function processDueEmails(now = new Date()) {
       text: item.body,
       replyTo: item.createdBy ? authorEmails.get(item.createdBy) : null,
       attachments,
+      from: senderByKey(item.senderKey),
     });
 
     if (result.sent) {

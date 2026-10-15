@@ -36,6 +36,12 @@ export type MailInput = {
   replyTo?: string | null;
   /** Pièces jointes, contenu déjà encodé en base64. */
   attachments?: { fileName: string; mimeType: string; base64: string }[];
+  /**
+   * Boîte d'expédition. À défaut, l'adresse configurée sur l'environnement.
+   * Toutes les boîtes de `medactio.fr` sont autorisées par la validation du
+   * domaine chez Mailjet : aucune déclaration adresse par adresse.
+   */
+  from?: { email: string; name: string } | null;
 };
 
 function config() {
@@ -114,8 +120,14 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
       body: JSON.stringify({
         Messages: [
           {
-            From: { Email: settings.from, Name: settings.fromName },
-            ReplyTo: { Email: input.replyTo || settings.replyTo },
+            From: {
+              Email: input.from?.email || settings.from,
+              Name: input.from?.name || settings.fromName,
+            },
+            // La réponse revient au collaborateur qui a écrit. Pour un envoi
+            // automatique, sans auteur, elle revient à la boîte expéditrice :
+            // c'est l'équipe qui l'a émis qui doit la recevoir.
+            ReplyTo: { Email: input.replyTo || input.from?.email || settings.replyTo },
             To: [{ Email: input.to, Name: input.toName || input.to }],
             Subject: input.subject,
             TextPart: input.text,

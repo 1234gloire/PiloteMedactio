@@ -692,6 +692,9 @@ export const scheduledEmails = pgTable("scheduled_emails", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   templateId: integer("templateId").references(() => emailTemplates.id, { onDelete: "set null" }),
   trigger: varchar("trigger", { length: 48, enum: emailTriggers }),
+  // Boîte d'expédition retenue à la rédaction : une relance programmée doit
+  // partir de la même boîte des jours plus tard.
+  senderKey: varchar("senderKey", { length: 32 }),
   ticketId: integer("ticketId").references(() => supportTickets.id, { onDelete: "cascade" }),
   dealId: integer("dealId").references(() => deals.id, { onDelete: "cascade" }),
   contactId: integer("contactId").references(() => contacts.id, { onDelete: "set null" }),

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { CalendarClock, Loader2, Mail, Paperclip, Send, X } from "lucide-react";
+import { AtSign, CalendarClock, Loader2, Mail, Paperclip, Send, X } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import { labelFor } from "./Common";
@@ -76,12 +76,14 @@ export function EmailComposer({
   const [templateId, setTemplateId] = useState("none");
   const [later, setLater] = useState(false);
   const [sendAt, setSendAt] = useState(tomorrowAtNine);
+  const [senderKey, setSenderKey] = useState<string>("");
   const [attached, setAttached] = useState<Attached[]>([]);
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const status = trpc.email.status.useQuery(undefined, { enabled: open });
   const templates = trpc.email.templates.list.useQuery(undefined, { enabled: open });
+  const senders = trpc.email.senders.useQuery(undefined, { enabled: open });
   const limits = trpc.email.attachments.limits.useQuery(undefined, { enabled: open });
   const upload = trpc.email.attachments.upload.useMutation();
   const discard = trpc.email.attachments.discard.useMutation();
@@ -89,6 +91,10 @@ export function EmailComposer({
   const schedule = trpc.email.schedule.useMutation();
   const utils = trpc.useUtils();
   const pending = send.isPending || schedule.isPending;
+
+  // La boîte de son équipe est proposée d'office : on ne la choisit que pour
+  // en changer.
+  const activeSender = senderKey || senders.data?.defaultKey || "";
 
   const totalBytes = attached.reduce((sum, file) => sum + file.sizeBytes, 0);
 
@@ -155,14 +161,14 @@ export function EmailComposer({
     try {
       if (later) {
         // datetime-local est en heure locale : new Date() la convertit avant l'envoi au serveur.
-        const result = await schedule.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, sendAt: new Date(sendAt), attachmentIds: attached.map(file => file.id) });
+        const result = await schedule.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, sendAt: new Date(sendAt), attachmentIds: attached.map(file => file.id), senderKey: activeSender || null });
         await utils.email.scheduled.list.invalidate();
         toast.success(`Envoi programmé pour ${result.to} le ${new Date(result.sendAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}.`);
       } else {
-        const result = await send.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, attachmentIds: attached.map(file => file.id) });
-        toast.success(`Message envoyé à ${result.to}${result.attachments ? ` avec ${result.attachments} pièce${result.attachments > 1 ? "s" : ""} jointe${result.attachments > 1 ? "s" : ""}` : ""}.`);
+        const result = await send.mutateAsync({ recipient: target, subject, body, dealId: dealId ?? null, attachmentIds: attached.map(file => file.id), senderKey: activeSender || null });
+        toast.success(`Message envoyé à ${result.to} depuis ${result.from}${result.attachments ? ` avec ${result.attachments} pièce${result.attachments > 1 ? "s" : ""} jointe${result.attachments > 1 ? "s" : ""}` : ""}.`);
       }
-      setSubject(""); setBody(""); setTemplateId("none"); setLater(false); setAttached([]);
+      setSubject(""); setBody(""); setTemplateId("none"); setLater(false); setAttached([]); setSenderKey("");
       onSent?.();
       onOpenChange(false);
     } catch (error) {
@@ -178,8 +184,7 @@ export function EmailComposer({
         <DialogHeader>
           <DialogTitle>Écrire un message</DialogTitle>
           <DialogDescription>
-            {recipientLabel ? `Destinataire : ${recipientLabel}. ` : ""}
-            La réponse vous parviendra directement{status.data?.from ? ` sur ${status.data.from}` : ""}.
+            {recipientLabel ? `Destinataire : ${recipientLabel}.` : "Choisissez la boîte d’expédition, puis rédigez."}
           </DialogDescription>
         </DialogHeader>
 
@@ -190,6 +195,21 @@ export function EmailComposer({
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            <div>
+              <Label htmlFor="expediteur" className="mb-2 block text-xs font-semibold text-slate-600">
+                <AtSign className="mr-1 inline h-3.5 w-3.5 text-teal-700" />Expédier depuis
+              </Label>
+              <select id="expediteur" value={activeSender} onChange={e => setSenderKey(e.target.value)} className={selectClass}>
+                {senders.data?.available.map(item => (
+                  <option key={item.key} value={item.key}>{item.label} — {item.email}</option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-muted-foreground">
+                C’est l’adresse que verra le destinataire. Votre réponse vous revient quoi qu’il arrive
+                {status.data?.from ? ` sur ${status.data.from}` : ""}.
+              </p>
+            </div>
+
             <div>
               <Label className="mb-2 block text-xs font-semibold text-slate-600">Partir d’un modèle</Label>
               <select value={templateId} onChange={e => applyTemplate(e.target.value)} className={selectClass}>

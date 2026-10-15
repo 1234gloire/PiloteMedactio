@@ -6,6 +6,17 @@ import { toast } from "sonner";
 import { formatDate } from "./Common";
 
 /** Libellés des déclencheurs d'envoi automatique, dans l'ordre du menu. */
+/** Boîtes d'expédition, pour nommer celle d'un envoi sans la rappeler en entier. */
+const senderLabels: Record<string, string> = {
+  contact: "l’accueil",
+  support: "le support",
+  secretariat: "le secrétariat",
+  commercial: "le commercial",
+  presidence: "la présidence",
+};
+
+const senderLabel = (key: string) => senderLabels[key] ?? key;
+
 export const TRIGGERS = [
   { value: "ticket:En cours", label: "Ticket passé en cours" },
   { value: "ticket:En attente client", label: "Ticket en attente client" },
@@ -108,6 +119,7 @@ export function ScheduledEmailsCard({
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {item.toName || item.toEmail} · {item.status === "Envoye" ? `envoyé ${formatDate(item.sentAt, true)}` : formatDate(item.sendAt, true)}
                       {item.trigger ? ` · ${triggerLabel(item.trigger)}` : " · programmé à la main"}
+                      {item.senderKey ? ` · depuis ${senderLabel(item.senderKey)}` : ""}
                     </p>
                     {item.lastError && item.status !== "Envoye" ? <p className="mt-1 text-xs text-rose-600">{item.lastError}</p> : null}
                   </div>
