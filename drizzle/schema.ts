@@ -569,6 +569,11 @@ export const calendarEvents = pgTable("calendar_events", {
   location: varchar("location", { length: 240 }),
   // Lien de visioconférence, quand la réservation en porte un.
   meetingUrl: text("meetingUrl"),
+  // Actions proposées par le service de réservation. En colonnes plutôt que
+  // noyées dans la description : l'agenda en fait des boutons, et la
+  // description reste ce qu'un humain a écrit.
+  rescheduleUrl: text("rescheduleUrl"),
+  cancelUrl: text("cancelUrl"),
   // Origine d'un rendez-vous venu de l'extérieur, et son identifiant chez
   // l'émetteur : c'est lui qui rend le traitement idempotent, un même appel
   // rejoué ne créant pas deux rendez-vous.

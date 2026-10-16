@@ -450,6 +450,8 @@ export async function listEvents(input?: { from?: Date; to?: Date; type?: string
     allDay: calendarEvents.allDay,
     location: calendarEvents.location,
     meetingUrl: calendarEvents.meetingUrl,
+    rescheduleUrl: calendarEvents.rescheduleUrl,
+    cancelUrl: calendarEvents.cancelUrl,
     externalSource: calendarEvents.externalSource,
     createdAt: calendarEvents.createdAt,
     updatedAt: calendarEvents.updatedAt,

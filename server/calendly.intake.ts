@@ -182,13 +182,13 @@ export async function receiveCalendlyEvent(req: Request, res: Response) {
     const startAt = new Date(payload.scheduled_event.start_time);
     const endAt = payload.scheduled_event.end_time ? new Date(payload.scheduled_event.end_time) : null;
 
+    // La description ne porte que ce qu'un humain a écrit ou déclaré : les
+    // liens d'action sont en colonnes, et l'agenda en fait des boutons.
     const description = [
-      `Réservé via Calendly par ${inviteeName} (${email}).`,
-      organizationName ? `Établissement déclaré : ${organizationName}.` : null,
-      jobTitle ? `Fonction : ${jobTitle}.` : null,
+      `Réservé par ${inviteeName} — ${email}`,
+      organizationName ? `Établissement déclaré : ${organizationName}` : null,
+      jobTitle ? `Fonction : ${jobTitle}` : null,
       extraNotes || null,
-      payload.cancel_url ? `Annuler : ${payload.cancel_url}` : null,
-      payload.reschedule_url ? `Reprogrammer : ${payload.reschedule_url}` : null,
     ]
       .filter(Boolean)
       .join("\n");
@@ -203,6 +203,8 @@ export async function receiveCalendlyEvent(req: Request, res: Response) {
       endAt,
       location: locationLabelOf(payload.scheduled_event.location),
       meetingUrl: meetingUrlOf(payload.scheduled_event.location),
+      rescheduleUrl: payload.reschedule_url || null,
+      cancelUrl: payload.cancel_url || null,
       externalSource: "calendly" as const,
       externalId,
     };
