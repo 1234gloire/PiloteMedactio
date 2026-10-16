@@ -97,3 +97,14 @@ describe("garde-fou", () => {
     }
   });
 });
+
+describe("demande entrante du site", () => {
+  it("fait partir le premier contact depuis la boîte commerciale", () => {
+    expect(automaticSenderKey("lead")).toBe("commercial");
+    expect(senderByKey(automaticSenderKey("lead"))?.email).toBe("commercial@medactio.fr");
+  });
+
+  it("signe du nom de la boîte, pas d'une signature générique", () => {
+    expect(senderByKey("commercial")?.name).toBe("Equipe commerciale Medactio");
+  });
+});

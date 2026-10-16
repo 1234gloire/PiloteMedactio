@@ -113,10 +113,11 @@ export function resolveSender(key: string | null | undefined, role: string): Sen
 
 /**
  * Boîte d'un envoi automatique, selon ce qui le déclenche : un incident part
- * du support, une relance commerciale du commercial, un impayé du secrétariat.
+ * du support, une demande entrante ou une relance commerciale du commercial,
+ * un impayé du secrétariat.
  */
-export function automaticSenderKey(context: "ticket" | "deal" | "invoice"): SenderKey {
+export function automaticSenderKey(context: "ticket" | "deal" | "lead" | "invoice"): SenderKey {
   if (context === "ticket") return "support";
-  if (context === "deal") return "commercial";
+  if (context === "deal" || context === "lead") return "commercial";
   return "secretariat";
 }

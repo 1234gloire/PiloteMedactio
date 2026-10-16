@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyVariables } from "./email.db";
 import { dealTrigger, relanceSendAt, ticketTrigger } from "./email.logic";
+import { emailTriggers } from "../drizzle/schema";
 
 describe("envois automatiques", () => {
   it("associe une étape à son déclencheur", () => {
@@ -33,5 +34,16 @@ describe("envois automatiques", () => {
     const text = "Bonjour {{contact}},\n\nVotre demande {{numero}} — {{ticket}}";
     expect(applyVariables(text, { contact: "Dr Martin", numero: "#42", ticket: "Accès bloqué" })).toBe("Bonjour Dr Martin,\n\nVotre demande #42 — Accès bloqué");
     expect(applyVariables(text, { numero: "#42" })).toBe("Bonjour,\n\nVotre demande #42 — ");
+  });
+});
+
+describe("déclencheur d'une demande entrante", () => {
+  it("existe et porte le préfixe lead", () => {
+    expect((emailTriggers as readonly string[])).toContain("lead:Nouveau");
+  });
+
+  it("ne se confond pas avec les déclencheurs de ticket ou d'opportunité", () => {
+    expect(ticketTrigger("Nouveau")).toBeNull();
+    expect(dealTrigger("Nouveau")).toBeNull();
   });
 });

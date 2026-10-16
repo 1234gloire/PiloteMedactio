@@ -670,6 +670,7 @@ export const emailTriggers = [
   "ticket:Resolu",
   "deal:Demo Effectuee",
   "deal:Devis Envoye",
+  "lead:Nouveau",
 ] as const;
 
 export const emailTemplates = pgTable("email_templates", {

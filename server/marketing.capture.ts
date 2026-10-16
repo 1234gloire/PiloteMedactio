@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { notifyRoles } from "./governance.db";
 import { captureLead } from "./marketing.db";
+import { onLeadCreated } from "./email.automation";
 
 /**
  * Capture des leads issus du site public medactio.fr.
@@ -176,6 +177,7 @@ export async function captureMarketingLead(req: Request, res: Response) {
 
     // Un lead se traite vite : le délai de réponse pèse directement sur la
     // conversion. Seule une première arrivée alerte, un doublon reste muet.
+    let mail: Awaited<ReturnType<typeof onLeadCreated>> | null = null;
     if (!created.duplicate) {
       void notifyRoles(["admin", "direction", "commercial", "marketing"], {
         category: "Commercial",
@@ -183,9 +185,22 @@ export async function captureMarketingLead(req: Request, res: Response) {
         link: "/marketing/leads",
         dedupeKey: `lead-${created.id}`,
       });
+
+      // Le prospect reçoit aussitôt de quoi réserver son créneau, sans
+      // attendre qu'un commercial soit disponible. Un échec d'envoi ne remet
+      // pas en cause l'enregistrement de la demande : le site doit recevoir
+      // sa confirmation même si l'email ne part pas.
+      mail = await onLeadCreated(created.id).catch(error => {
+        console.error("[Marketing] Message de bienvenue non envoyé", error);
+        return null;
+      });
     }
 
-    return res.status(created.duplicate ? 200 : 201).json({ success: true, duplicate: created.duplicate });
+    return res.status(created.duplicate ? 200 : 201).json({
+      success: true,
+      duplicate: created.duplicate,
+      mail: mail ? { sent: mail.sent, scheduled: mail.scheduled, reason: mail.reason } : null,
+    });
   } catch (error) {
     console.error("[Marketing] Lead capture failed", error);
     return res.status(500).json({ success: false, message: "Le formulaire n’a pas pu être enregistré." });

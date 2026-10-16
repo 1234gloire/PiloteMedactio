@@ -5,6 +5,7 @@ import {
   emailTemplates,
   interactions,
   internalUsers,
+  marketingLeads,
   organizations,
   scheduledEmails,
   supportTicketEvents,
@@ -46,7 +47,8 @@ type Recipient = {
 
 type Target =
   | { kind: "ticket"; ticket: typeof supportTickets.$inferSelect }
-  | { kind: "deal"; dealId: number };
+  | { kind: "deal"; dealId: number }
+  | { kind: "lead"; leadId: number };
 
 export type TriggerResult = {
   /** Nombre de modèles rattachés à l'événement. */
@@ -91,6 +93,30 @@ async function dealRecipient(dealId: number): Promise<Recipient | null> {
       .innerJoin(contacts, eq(contacts.organizationId, organizations.id))
       .where(and(eq(deals.id, dealId), isNotNull(contacts.email)))
       .orderBy(asc(contacts.id))
+      .limit(1)
+  )[0];
+  return row?.email ? row : null;
+}
+
+/**
+ * Personne ayant déposé une demande depuis le site public.
+ *
+ * Le lead porte lui-même l'adresse et l'établissement déclarés : on écrit à
+ * ce qu'elle a saisi, sans dépendre d'une fiche contact qui pourrait ne pas
+ * exister encore.
+ */
+async function leadRecipient(leadId: number): Promise<Recipient | null> {
+  const db = await requireDb();
+  const row = (
+    await db
+      .select({
+        email: marketingLeads.email,
+        name: marketingLeads.fullName,
+        contactId: marketingLeads.contactId,
+        organizationName: marketingLeads.organizationName,
+      })
+      .from(marketingLeads)
+      .where(eq(marketingLeads.id, leadId))
       .limit(1)
   )[0];
   return row?.email ? row : null;
@@ -157,13 +183,23 @@ async function fireTrigger(trigger: EmailTrigger, target: Target, authorId: numb
   const templates = await db.select().from(emailTemplates).where(eq(emailTemplates.trigger, trigger)).orderBy(asc(emailTemplates.delayDays));
   if (!templates.length) return { templates: 0, sent: 0, scheduled: 0 };
 
-  const recipient = target.kind === "ticket" ? await ticketRecipient(target.ticket) : await dealRecipient(target.dealId);
+  const recipient =
+    target.kind === "ticket" ? await ticketRecipient(target.ticket)
+    : target.kind === "deal" ? await dealRecipient(target.dealId)
+    : await leadRecipient(target.leadId);
   if (!recipient) return { templates: templates.length, sent: 0, scheduled: 0, reason: "Aucune adresse connue pour ce client." };
+
+  // Un envoi automatique n'a pas de rédacteur qui choisirait sa boîte : elle
+  // découle de ce qui le déclenche — un incident part du support, une demande
+  // entrante ou une relance commerciale du commercial. Le message est signé
+  // du nom de cette boîte, et non d'une signature générique.
+  const senderKey = automaticSenderKey(target.kind);
+  const sender = senderByKey(senderKey);
 
   const variables: MessageVariables = {
     contact: recipient.name,
     etablissement: recipient.organizationName,
-    expediteur: SENDER,
+    expediteur: sender?.name || SENDER,
     poste: "",
     ticket: target.kind === "ticket" ? target.ticket.title : "",
     numero: target.kind === "ticket" ? `#${target.ticket.id}` : "",
@@ -176,12 +212,6 @@ async function fireTrigger(trigger: EmailTrigger, target: Target, authorId: numb
   let sent = 0;
   let scheduled = 0;
   let reason: string | undefined;
-
-  // Un envoi automatique n'a pas de rédacteur qui choisirait sa boîte : elle
-  // découle de ce qui le déclenche — un incident part du support, une relance
-  // commerciale du commercial.
-  const senderKey = automaticSenderKey(target.kind);
-  const sender = senderByKey(senderKey);
 
   for (const template of templates) {
     const subject = applyVariables(template.subject, variables).trim();
@@ -243,6 +273,20 @@ export async function onTicketStatusChanged(
   await cancelObsolete({ ticketId: ticket.id }, trigger);
   if (!trigger) return { templates: 0, sent: 0, scheduled: 0 };
   return fireTrigger(trigger, { kind: "ticket", ticket }, authorId);
+}
+
+/**
+ * Demande de démonstration reçue du site public.
+ *
+ * Le prospect doit pouvoir réserver son créneau sans attendre qu'un
+ * commercial soit disponible : le message part dans la foulée de sa demande,
+ * depuis la boîte commerciale, et porte le lien de réservation.
+ *
+ * Un lead déjà connu ne redéclenche rien : réécrire le même message à
+ * quelqu'un qui a déjà reçu l'invitation ferait mauvais effet.
+ */
+export async function onLeadCreated(leadId: number): Promise<TriggerResult> {
+  return fireTrigger("lead:Nouveau", { kind: "lead", leadId }, null);
 }
 
 export async function currentDealStage(dealId: number) {

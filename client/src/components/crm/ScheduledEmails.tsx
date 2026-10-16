@@ -23,6 +23,7 @@ export const TRIGGERS = [
   { value: "ticket:Resolu", label: "Ticket marqué résolu" },
   { value: "deal:Demo Effectuee", label: "Démonstration effectuée" },
   { value: "deal:Devis Envoye", label: "Devis envoyé" },
+  { value: "lead:Nouveau", label: "Demande de démonstration reçue du site" },
 ] as const;
 
 export type TriggerValue = (typeof TRIGGERS)[number]["value"];
