@@ -229,7 +229,7 @@ export const marketingLeads = pgTable(
     status: varchar("status", { length: 32, enum: ["Nouveau", "Qualifie", "RDV Planifie", "Converti", "Rejete"] })
       .default("Nouveau")
       .notNull(),
-    source: varchar("source", { length: 32, enum: ["Site Web", "Import", "Evenement", "Manuel"] }).default("Site Web").notNull(),
+    source: varchar("source", { length: 32, enum: ["Site Web", "Import", "Evenement", "Manuel", "Calendly"] }).default("Site Web").notNull(),
     utmSource: varchar("utmSource", { length: 160 }),
     utmMedium: varchar("utmMedium", { length: 160 }),
     utmCampaign: varchar("utmCampaign", { length: 240 }),
@@ -567,6 +567,13 @@ export const calendarEvents = pgTable("calendar_events", {
   endAt: timestamp("endAt", { withTimezone: true }),
   allDay: boolean("allDay").default(false).notNull(),
   location: varchar("location", { length: 240 }),
+  // Lien de visioconférence, quand la réservation en porte un.
+  meetingUrl: text("meetingUrl"),
+  // Origine d'un rendez-vous venu de l'extérieur, et son identifiant chez
+  // l'émetteur : c'est lui qui rend le traitement idempotent, un même appel
+  // rejoué ne créant pas deux rendez-vous.
+  externalSource: varchar("externalSource", { length: 32, enum: ["calendly"] }),
+  externalId: varchar("externalId", { length: 240 }).unique(),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("calendar_events_start_idx").on(table.startAt)]);

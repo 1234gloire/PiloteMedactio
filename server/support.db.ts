@@ -449,6 +449,8 @@ export async function listEvents(input?: { from?: Date; to?: Date; type?: string
     endAt: calendarEvents.endAt,
     allDay: calendarEvents.allDay,
     location: calendarEvents.location,
+    meetingUrl: calendarEvents.meetingUrl,
+    externalSource: calendarEvents.externalSource,
     createdAt: calendarEvents.createdAt,
     updatedAt: calendarEvents.updatedAt,
   }).from(calendarEvents)
